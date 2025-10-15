@@ -1,0 +1,41 @@
+# --- General ---
+.DS_Store
+*.log
+*.swp
+
+# --- Flutter/Dart ---
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+build/
+coverage/
+flutter_export_environment.sh
+
+# --- iOS ---
+ios/Flutter/.last_build_id
+ios/Flutter/ephemeral/
+ios/.symlinks/
+ios/Pods/
+# ควร track ส่วนที่เหลือของ iOS (Runner, Podfile, xcworkspace, etc.)
+
+# --- Android ---
+android/.gradle/
+android/local.properties
+# ควร track:
+#   android/gradlew
+#   android/gradlew.bat
+#   android/gradle/wrapper/gradle-wrapper.jar
+#   android/app/src/** (Java/Kotlin Manifest resources ฯลฯ)
+
+# --- macOS ---
+macos/Flutter/ephemeral/
+macos/Pods/
+
+# --- Windows/Linux (desktop) ---
+linux/flutter/ephemeral/
+windows/flutter/ephemeral/
+
+# --- VSCode/IDE ---
+.idea/
+# .vscode/   # ถ้าไม่อยาก commit ก็ uncomment บรรทัดนี้
