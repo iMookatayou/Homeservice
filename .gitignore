@@ -1,0 +1,110 @@
+.DS_Store
+Thumbs.db
+*.log
+*.swp
+*.tmp
+*.bak
+*.lock
+*.class
+*.iml
+*.ipr
+*.iws
+
+# IDE / Editor configs
+.idea/
+.vscode/
+.atom/
+.history/
+.svn/
+
+# Build / Cache directories
+build/
+.cache/
+dist/
+tmp/
+temp/
+
+homeservice-backend/bin/
+homeservice-backend/tmp/
+homeservice-backend/vendor/
+homeservice-backend/coverage/
+homeservice-backend/.env
+homeservice-backend/.env.local
+homeservice-backend/.env.*.local
+homeservice-backend/.DS_Store
+
+# Go build outputs
+homeservice-backend/*.exe
+homeservice-backend/*.test
+homeservice-backend/*.out
+
+# Go modules cache
+homeservice-backend/go.sum
+homeservice-backend/.air.toml # if you use air live reload config
+
+# Flutter/Dart specific
+homeservice-frontend/.dart_tool/
+homeservice-frontend/.flutter-plugins
+homeservice-frontend/.flutter-plugins-dependencies
+homeservice-frontend/.packages
+homeservice-frontend/.pub-cache/
+homeservice-frontend/.pub/
+homeservice-frontend/build/
+homeservice-frontend/coverage/
+homeservice-frontend/flutter_export_environment.sh
+
+# Android
+homeservice-frontend/android/.gradle/
+homeservice-frontend/android/local.properties
+homeservice-frontend/android/app/release/
+homeservice-frontend/android/app/debug/
+homeservice-frontend/android/app/profile/
+
+# iOS
+homeservice-frontend/ios/.symlinks/
+homeservice-frontend/ios/Flutter/Flutter.podspec
+homeservice-frontend/ios/Flutter/Generated.xcconfig
+homeservice-frontend/ios/Flutter/flutter_export_environment.sh
+homeservice-frontend/ios/Flutter/.last_build_id
+homeservice-frontend/ios/Flutter/ephemeral/
+homeservice-frontend/ios/Pods/
+
+# macOS
+homeservice-frontend/macos/Flutter/ephemeral/
+homeservice-frontend/macos/Pods/
+
+# Linux / Windows (desktop)
+homeservice-frontend/linux/flutter/ephemeral/
+homeservice-frontend/windows/flutter/ephemeral/
+
+# Others
+homeservice-frontend/*.iml
+homeservice-frontend/.metadata
+homeservice-frontend/.DS_Store
+
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+*.pyc
+__pycache__/
+
+.env
+.env.local
+.env.*.local
+*.key
+*.pem
+*.crt
+*.p12
+
+*.test
+*.spec
+*.coverage
+*.swp
+*.swo
+*.orig
+
+!README.md
+!.gitkeep
