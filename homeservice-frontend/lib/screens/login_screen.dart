@@ -117,7 +117,6 @@ class _LoginState extends ConsumerState<LoginScreen> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          // Logo: house inside soft circle
                           Container(
                             width: 64,
                             height: 64,
