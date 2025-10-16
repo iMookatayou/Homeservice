@@ -29,7 +29,7 @@ class _LoginState extends ConsumerState<LoginScreen> {
   static const _card = Colors.white;
   static const _textMain = Color(0xFF0B1220); 
   static const _textSub = Color(0xFF475569);
-  static const _divider = Color(0xFFE5E7EB); // gray-200
+  static const _divider = Color(0xFFE5E7EB); 
   static const _fieldFill = Color(0xFFFFFFFF); // inputs white
 
   @override
