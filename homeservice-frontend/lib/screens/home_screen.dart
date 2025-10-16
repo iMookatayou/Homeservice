@@ -9,7 +9,7 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authProvider); // AuthState
+    final auth = ref.watch(authProvider); 
     final user = auth.user;
 
     return Scaffold(
