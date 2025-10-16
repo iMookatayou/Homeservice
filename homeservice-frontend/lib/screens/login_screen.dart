@@ -23,7 +23,7 @@ class _LoginState extends ConsumerState<LoginScreen> {
   bool _obscure = true;
   String? _error;
 
-  static const _primary = Color(0xFF1E3A8A); // deep indigo/blue
+  static const _primary = Color(0xFF1E3A8A);
   static const _primarySoft = Color(0xFF2563EB); // accent blue
   static const _bgSoft = Color(0xFFF3F6FF); // very light blue background
   static const _card = Colors.white;
