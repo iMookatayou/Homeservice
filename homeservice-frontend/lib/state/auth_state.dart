@@ -38,7 +38,7 @@ class AuthState {
 
 class AuthNotifier extends Notifier<AuthState> {
   late final AuthRepository _repo;
-  bool _booting = false; // 👈 กัน tryLoadSession เรียกซ้ำ
+  bool _booting = false;
 
   @override
   AuthState build() {
@@ -101,9 +101,8 @@ class AuthNotifier extends Notifier<AuthState> {
     }
   }
 
-  /// เรียกจาก SplashScreen เท่านั้น
   Future<void> tryLoadSession() async {
-    if (_booting) return; // 👈 กัน re-entry
+    if (_booting) return;
     _booting = true;
     try {
       debugPrint('[auth] tryLoadSession start');

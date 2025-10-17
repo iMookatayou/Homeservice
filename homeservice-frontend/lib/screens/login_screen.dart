@@ -24,12 +24,12 @@ class _LoginState extends ConsumerState<LoginScreen> {
   String? _error;
 
   static const _primary = Color(0xFF1E3A8A);
-  static const _primarySoft = Color(0xFF2563EB); 
+  static const _primarySoft = Color(0xFF2563EB);
   static const _bgSoft = Color(0xFFF3F6FF);
   static const _card = Colors.white;
-  static const _textMain = Color(0xFF0B1220); 
+  static const _textMain = Color(0xFF0B1220);
   static const _textSub = Color(0xFF475569);
-  static const _divider = Color(0xFFE5E7EB); 
+  static const _divider = Color(0xFFE5E7EB);
   static const _fieldFill = Color(0xFFFFFFFF);
 
   @override
@@ -42,20 +42,38 @@ class _LoginState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    // กันกดซ้ำ
+    if (_busy) return;
+    // validate form
     if (!_form.currentState!.validate()) return;
+
+    // ปิดคีย์บอร์ด
+    FocusScope.of(context).unfocus();
+
     setState(() {
       _busy = true;
       _error = null;
     });
-    final ok = await ref
-        .read(authProvider.notifier)
-        .login(_email.text.trim(), _pw.text);
+
+    final email = _email.text.trim();
+    final password = _pw.text;
+
+    final ok = await ref.read(authProvider.notifier).login(email, password);
     if (!mounted) return;
+
+    final s = ref.read(authProvider);
+
     setState(() => _busy = false);
-    if (ok) {
+
+    if (ok && s.isAuthenticated) {
       context.go('/home');
     } else {
-      setState(() => _error = 'Invalid email or password');
+      // โชว์ข้อความจาก backend ถ้ามี
+      setState(() {
+        _error = s.error?.isNotEmpty == true
+            ? s.error
+            : 'Invalid email or password';
+      });
     }
   }
 
@@ -126,7 +144,6 @@ class _LoginState extends ConsumerState<LoginScreen> {
                             ),
                             alignment: Alignment.center,
                             child: const Icon(
-                              // FIX: 'houseLine' -> 'house'
                               PhosphorIconsBold.house,
                               size: 34,
                               color: _primary,
@@ -245,8 +262,10 @@ class _LoginState extends ConsumerState<LoginScreen> {
                                 tooltip: _obscure
                                     ? 'Show password'
                                     : 'Hide password',
-                                onPressed: () =>
-                                    setState(() => _obscure = !_obscure),
+                                onPressed: _busy
+                                    ? null
+                                    : () =>
+                                          setState(() => _obscure = !_obscure),
                                 icon: Icon(
                                   _obscure
                                       ? PhosphorIconsBold.eye

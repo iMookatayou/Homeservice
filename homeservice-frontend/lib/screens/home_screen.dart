@@ -1,23 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 
 import '../state/auth_state.dart';
+import '../state/weather_provider.dart';
+import '../models/weather.dart';
+
+class AppColors {
+  // Hospital-ish, government-clean
+  static const deepNavy = Color(0xFF0F2D5C);
+  static const softBlue = Color(0xFF2D5BFF);
+  static const mint = Color(0xFF14B8A6);
+  static const cardBorder = Color(0xFFE7ECF4);
+  static const textMuted = Color(0xFF6B7280);
+}
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authProvider); 
+    final auth = ref.watch(authProvider);
     final user = auth.user;
+    final weather = ref.watch(currentWeatherProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Home Service'),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.deepNavy,
+        titleSpacing: 16,
+        title: const Text('Home Service Dashboard'),
         actions: [
           IconButton(
-            tooltip: 'ออกจากระบบ',
+            tooltip: 'Logout',
             onPressed: () async {
               await ref.read(authProvider.notifier).logout();
               if (!context.mounted) return;
@@ -27,12 +44,781 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: Center(
-        child: auth.loading
-            ? const CircularProgressIndicator()
-            : Text(
-                user != null ? 'ยินดีต้อนรับ, ${user.name}' : 'ยินดีต้อนรับ',
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(locationProvider);
+          ref.invalidate(currentWeatherProvider);
+          await ref.read(currentWeatherProvider.future);
+        },
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+          children: [
+            _WelcomeHeader(name: user?.name),
+            const SizedBox(height: 16),
+            _SectionCard(
+              title: 'Current Weather',
+              subtitle: 'Local conditions',
+              trailing: _AutoSyncChip(),
+              child: _WeatherBody(weather: weather),
+            ),
+            const SizedBox(height: 16),
+
+            // ===== Quick Tools (new UX) =====
+            _SectionCard(
+              title: 'Quick Tools',
+              subtitle: 'Tap a tool to get started',
+              child: const _QuickToolsSection(),
+            ),
+
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _WelcomeHeader extends StatelessWidget {
+  const _WelcomeHeader({this.name});
+  final String? name;
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateFormat('EEE, MMM d • HH:mm').format(DateTime.now());
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Colors.white, Color(0xFFF1F5FF)],
+        ),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        children: [
+          Container(
+            height: 52,
+            width: 52,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.cardBorder),
+              boxShadow: const [
+                BoxShadow(
+                  blurRadius: 10,
+                  color: Color(0x14000000),
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.person_pin,
+              size: 32,
+              color: AppColors.deepNavy,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Welcome, ${name ?? "Guest"}',
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: AppColors.deepNavy,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Ready to manage your home • $now',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          const _PillChip(
+            icon: Icons.verified_user_outlined,
+            label: 'Secure',
+            color: AppColors.mint,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionCard extends StatelessWidget {
+  const _SectionCard({
+    required this.title,
+    required this.child,
+    this.subtitle,
+    this.trailing,
+  });
+
+  final String title;
+  final String? subtitle;
+  final Widget child;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: Colors.white,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: AppColors.cardBorder),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: _SectionHeader(title: title, subtitle: subtitle),
+                ),
+                if (trailing != null) trailing!,
+              ],
+            ),
+            const SizedBox(height: 8),
+            const Divider(height: 24, color: AppColors.cardBorder),
+            child,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  const _SectionHeader({required this.title, this.subtitle});
+  final String title;
+  final String? subtitle;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: AppColors.deepNavy,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          Text(
+            subtitle!,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+class _AutoSyncChip extends ConsumerWidget {
+  const _AutoSyncChip({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return const _PillChip(
+      icon: Icons.sync,
+      label: 'Auto-sync',
+      color: AppColors.softBlue,
+    );
+  }
+}
+
+class _PillChip extends StatelessWidget {
+  const _PillChip({
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 30,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withOpacity(0.25)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeatherBody extends StatelessWidget {
+  const _WeatherBody({required this.weather});
+  final AsyncValue<WeatherNow> weather;
+
+  @override
+  Widget build(BuildContext context) {
+    return weather.when(
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 20),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (e, _) => _EmptyState(
+        icon: Icons.cloud_off,
+        title: 'Failed to load weather',
+        message: '$e',
+        actionLabel: 'Retry',
+        onAction: () {},
+      ),
+      data: (w) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Top row: temperature + condition
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _MetricTile(
+                  icon: Icons.thermostat_outlined,
+                  title: 'Temperature',
+                  value: '${w.temperature.toStringAsFixed(1)} °C',
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _MetricTile(
+                    icon: Icons.wb_sunny_outlined,
+                    title: 'Condition',
+                    value: w.conditionLabel,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Bottom row: wind + updated
+            Row(
+              children: [
+                Expanded(
+                  child: _InfoRow(
+                    icon: Icons.air,
+                    label: 'Wind',
+                    value: '${w.windSpeed.toStringAsFixed(1)} m/s',
+                  ),
+                ),
+                Expanded(
+                  child: _InfoRow(
+                    icon: Icons.schedule_outlined,
+                    label: 'Updated',
+                    value: DateFormat('HH:mm').format(w.time),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _MetricTile extends StatelessWidget {
+  const _MetricTile({
+    required this.icon,
+    required this.title,
+    required this.value,
+  });
+  final IconData icon;
+  final String title;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF7FAFF),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.cardBorder),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 22, color: AppColors.softBlue),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: AppColors.deepNavy,
+                fontWeight: FontWeight.w700,
               ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  const _InfoRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: AppColors.textMuted),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: AppColors.textMuted,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.deepNavy),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
+  const _EmptyState({
+    required this.icon,
+    required this.title,
+    required this.message,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  final IconData icon;
+  final String title;
+  final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 18),
+      child: Column(
+        children: [
+          Icon(icon, size: 40, color: AppColors.textMuted),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppColors.deepNavy,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            message,
+            textAlign: TextAlign.center,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+          ),
+          if (actionLabel != null) ...[
+            const SizedBox(height: 10),
+            OutlinedButton(
+              onPressed: onAction,
+              style: OutlinedButton.styleFrom(
+                foregroundColor: AppColors.softBlue,
+                side: const BorderSide(color: AppColors.softBlue),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Text(actionLabel!),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+// ===================================================================
+// =====================  NEW: Quick Tools Section  ===================
+// ===================================================================
+
+class _QuickToolsSection extends StatelessWidget {
+  const _QuickToolsSection();
+
+  @override
+  Widget build(BuildContext context) {
+    // กลุ่มปุ่มหลักที่ผู้ใช้ขอให้มี
+    final essentials = [
+      const _ToolItem(
+        Icons.handyman, // รายชื่อช่าง
+        'Contractors',
+        '/contractors',
+        'Browse service providers',
+      ),
+      const _ToolItem(
+        Icons.event_note, // จดบันทึกสำคัญ
+        'Important Notes',
+        '/notes',
+        'Save key notes',
+      ),
+      const _ToolItem(
+        Icons.videocam_outlined, // กล้องที่บ้าน
+        'Home Cameras',
+        '/cameras',
+        'View live feeds',
+      ),
+      const _ToolItem(
+        Icons.shopping_cart_checkout, // ของใช้ที่บ้านซื้ออะไรบ้าง
+        'Purchases',
+        '/purchases',
+        'Track household buys',
+      ),
+    ];
+
+    // ปุ่มทั่วไปเดิม + ที่เกี่ยวข้อง
+    final general = [
+      const _ToolItem(
+        Icons.map_rounded,
+        'Nearby Map',
+        '/map',
+        'Find shops & services',
+      ),
+      const _ToolItem(
+        Icons.restaurant_menu,
+        'Food Tracker',
+        '/food',
+        'Log daily meals',
+      ),
+      const _ToolItem(
+        Icons.calculate,
+        'Calculator',
+        '/calc',
+        'Quick calculations',
+      ),
+      const _ToolItem(
+        Icons.photo_camera_outlined,
+        'Camera',
+        '/camera',
+        'Scan or capture',
+      ),
+      const _ToolItem(Icons.task_alt, 'Tasks', '/tasks', 'To-dos & reminders'),
+      const _ToolItem(Icons.receipt_long, 'Bills', '/bills', 'Pay & reminders'),
+      const _ToolItem(
+        Icons.local_shipping_outlined,
+        'Packages',
+        '/packages',
+        'Deliveries & returns',
+      ),
+      const _ToolItem(
+        Icons.settings_suggest_outlined,
+        'Settings',
+        '/settings',
+        'App preferences',
+      ),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Search bar ที่พุ่งไปหน้ารายชื่อช่างโดยตรง
+        _LauncherSearch(
+          hintText: 'Search contractors (electrician, plumber, AC...)',
+          onSubmit: (q) => _goTo(context, '/contractors', query: q),
+        ),
+        const SizedBox(height: 12),
+
+        // กลุ่ม Essential เด่นขึ้น (การ์ดใหญ่)
+        _GroupHeader(label: 'Essentials'),
+        const SizedBox(height: 8),
+        _ToolGrid(items: essentials, large: true),
+        const SizedBox(height: 14),
+
+        // ชิปหมวดหมู่ช่าง กดแล้วไปหน้าเดียวกันพร้อม filter
+        _GroupHeader(label: 'Contractor Categories'),
+        const SizedBox(height: 8),
+        _ContractorChips(
+          onTap: (slug) => _goTo(context, '/contractors', category: slug),
+        ),
+        const SizedBox(height: 14),
+
+        // กลุ่มทั่วไป (การ์ดมาตรฐาน)
+        _GroupHeader(label: 'More Tools'),
+        const SizedBox(height: 8),
+        _ToolGrid(items: general),
+      ],
+    );
+  }
+
+  void _goTo(
+    BuildContext context,
+    String route, {
+    String? query,
+    String? category,
+  }) {
+    // ส่งพารามไว้ใน queryParameters ถ้าระบบ router รองรับ
+    // ถ้าใช้ go_router 10+ สามารถใช้ state.extra หรือ queryParameters
+    final uri = Uri(
+      path: route,
+      queryParameters: {
+        if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
+        if (category != null && category.trim().isNotEmpty)
+          'cat': category.trim(),
+      },
+    ).toString();
+    context.push(uri);
+  }
+}
+
+class _GroupHeader extends StatelessWidget {
+  const _GroupHeader({required this.label});
+  final String label;
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label,
+      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+        color: AppColors.deepNavy,
+        fontWeight: FontWeight.w700,
+      ),
+    );
+  }
+}
+
+class _LauncherSearch extends StatefulWidget {
+  const _LauncherSearch({
+    required this.hintText,
+    required this.onSubmit,
+    super.key,
+  });
+  final String hintText;
+  final void Function(String query) onSubmit;
+
+  @override
+  State<_LauncherSearch> createState() => _LauncherSearchState();
+}
+
+class _LauncherSearchState extends State<_LauncherSearch> {
+  final _controller = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _controller,
+      onSubmitted: widget.onSubmit,
+      decoration: InputDecoration(
+        hintText: widget.hintText,
+        prefixIcon: const Icon(Icons.search, color: AppColors.textMuted),
+        filled: true,
+        fillColor: const Color(0xFFF7FAFF),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 12,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.cardBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.softBlue),
+        ),
+      ),
+    );
+  }
+}
+
+class _ContractorChips extends StatelessWidget {
+  const _ContractorChips({required this.onTap});
+  final void Function(String slug) onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const cats = <(IconData, String, String)>[
+      (Icons.electrical_services, 'Electrician', 'electrician'),
+      (Icons.water_damage_outlined, 'Plumber', 'plumber'),
+      (Icons.ac_unit, 'AC & HVAC', 'hvac'),
+      (Icons.build_circle_outlined, 'General Repair', 'general'),
+      (Icons.carpenter, 'Carpenter', 'carpenter'),
+      (Icons.pest_control_outlined, 'Pest Control', 'pest'),
+      (Icons.brush_outlined, 'Painter', 'painter'),
+      (Icons.local_gas_station, 'Gas/Heater', 'gas'),
+    ];
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final c in cats)
+          GestureDetector(
+            onTap: () => onTap(c.$3),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: AppColors.cardBorder),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(c.$1, size: 18, color: AppColors.softBlue),
+                  const SizedBox(width: 6),
+                  Text(
+                    c.$2,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                      color: AppColors.deepNavy,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ToolGrid extends StatelessWidget {
+  const _ToolGrid({required this.items, this.large = false});
+
+  final List<_ToolItem> items;
+  final bool large;
+
+  @override
+  Widget build(BuildContext context) {
+    // การ์ดใหญ่: ไอคอน 36 / font ใหญ่ / aspect ratio 1.1
+    // การ์ดปกติ: ไอคอน 30 / aspect ratio 1.25
+    final iconSize = large ? 36.0 : 30.0;
+    final aspect = large ? 1.1 : 1.25;
+
+    return GridView.builder(
+      shrinkWrap: true,
+      itemCount: items.length,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: aspect,
+      ),
+      itemBuilder: (_, i) =>
+          _ToolCard(item: items[i], iconSize: iconSize, large: large),
+    );
+  }
+}
+
+class _ToolItem {
+  final IconData icon;
+  final String label;
+  final String route;
+  final String caption;
+  const _ToolItem(this.icon, this.label, this.route, this.caption);
+}
+
+class _ToolCard extends StatelessWidget {
+  const _ToolCard({
+    required this.item,
+    required this.iconSize,
+    required this.large,
+  });
+  final _ToolItem item;
+  final double iconSize;
+  final bool large;
+
+  @override
+  Widget build(BuildContext context) {
+    final titleStyle = large
+        ? Theme.of(context).textTheme.titleMedium
+        : Theme.of(context).textTheme.titleSmall;
+
+    return InkWell(
+      onTap: () => context.push(item.route),
+      borderRadius: BorderRadius.circular(16),
+      child: Ink(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.cardBorder),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(item.icon, size: iconSize, color: AppColors.softBlue),
+              const SizedBox(height: 10),
+              Text(
+                item.label,
+                textAlign: TextAlign.center,
+                style: titleStyle?.copyWith(
+                  color: AppColors.deepNavy,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                item.caption,
+                textAlign: TextAlign.center,
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
