@@ -34,7 +34,7 @@ class _RegisterState extends ConsumerState<RegisterScreen> {
   static const _bgSoft = Color(0xFFF3F6FF);
   static const _card = Colors.white;
   static const _textMain = Color(0xFF0B1220); 
-  static const _textSub = Color(0xFF475569); // slate-600
+  static const _textSub = Color(0xFF475569);
   static const _divider = Color(0xFFE5E7EB); // gray-200
   static const _fieldFill = Color(0xFFFFFFFF); // inputs white
 
