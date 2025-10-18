@@ -43,7 +43,6 @@ class _LoginState extends ConsumerState<LoginScreen> {
 
   Future<void> _submit() async {
     if (_busy) return;
-    // validate form
     if (!_form.currentState!.validate()) return;
 
     FocusScope.of(context).unfocus();
