@@ -65,7 +65,6 @@ class _LoginState extends ConsumerState<LoginScreen> {
     if (ok && s.isAuthenticated) {
       context.go('/home');
     } else {
-      // โชว์ข้อความจาก backend ถ้ามี
       setState(() {
         _error = s.error?.isNotEmpty == true
             ? s.error
