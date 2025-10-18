@@ -46,7 +46,6 @@ class _LoginState extends ConsumerState<LoginScreen> {
     // validate form
     if (!_form.currentState!.validate()) return;
 
-    // ปิดคีย์บอร์ด
     FocusScope.of(context).unfocus();
 
     setState(() {
