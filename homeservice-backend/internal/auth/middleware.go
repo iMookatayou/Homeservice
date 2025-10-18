@@ -2,46 +2,93 @@ package auth
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
 
-type ctxKey string
+type ctxKey int
 
-const UserCtxKey ctxKey = "userClaims"
+const userCtxKey ctxKey = iota
 
-func AuthMiddleware(secret string) func(http.Handler) http.Handler {
+func bearerTokenFromHeader(h string) (string, bool) {
+	if h == "" {
+		return "", false
+	}
+	if len(h) < 8 || !strings.EqualFold(h[:7], "bearer ") {
+		return "", false
+	}
+	return strings.TrimSpace(h[7:]), true
+}
+
+func keyFuncHMAC(secret string) jwt.Keyfunc {
+	return func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, errors.New("unexpected signing method")
+		}
+		return []byte(secret), nil
+	}
+}
+
+func RequireAuth(secret string, newClaims func() *Claims) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			h := r.Header.Get("Authorization")
-			if !strings.HasPrefix(strings.ToLower(h), "bearer ") {
+			raw, ok := bearerTokenFromHeader(r.Header.Get("Authorization"))
+			if !ok {
 				http.Error(w, "missing bearer token", http.StatusUnauthorized)
 				return
 			}
-			tokenStr := strings.TrimSpace(h[7:])
-			token, err := jwt.ParseWithClaims(tokenStr, &Claims{}, func(t *jwt.Token) (interface{}, error) {
-				return []byte(secret), nil
-			})
+			claims := newClaims()
+			parser := jwt.NewParser(
+				jwt.WithValidMethods([]string{"HS256", "HS384", "HS512"}),
+				jwt.WithLeeway(60*time.Second),
+			)
+			token, err := parser.ParseWithClaims(raw, claims, keyFuncHMAC(secret))
 			if err != nil || !token.Valid {
 				http.Error(w, "invalid token", http.StatusUnauthorized)
 				return
 			}
-			claims, _ := token.Claims.(*Claims)
-			ctx := context.WithValue(r.Context(), UserCtxKey, claims)
+			ctx := context.WithValue(r.Context(), userCtxKey, claims)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
 
-func ClaimsFrom(r *http.Request) *Claims {
-	v := r.Context().Value(UserCtxKey)
-	if v == nil {
-		return nil
+func OptionalAuth(secret string, newClaims func() *Claims) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			raw, ok := bearerTokenFromHeader(r.Header.Get("Authorization"))
+			if ok {
+				claims := newClaims()
+				parser := jwt.NewParser(
+					jwt.WithValidMethods([]string{"HS256", "HS384", "HS512"}),
+					jwt.WithLeeway(60*time.Second),
+				)
+				if token, err := parser.ParseWithClaims(raw, claims, keyFuncHMAC(secret)); err == nil && token.Valid {
+					r = r.WithContext(context.WithValue(r.Context(), userCtxKey, claims))
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
 	}
-	if c, ok := v.(*Claims); ok {
-		return c
+}
+
+// คืน *Claims (pointer) -> ใช้เทียบ nil ได้สบาย
+func ClaimsFrom(r *http.Request) *Claims {
+	if v := r.Context().Value(userCtxKey); v != nil {
+		if c, ok := v.(*Claims); ok {
+			return c
+		}
 	}
 	return nil
+}
+
+func UserIDFrom(r *http.Request) (string, bool) {
+	if c := ClaimsFrom(r); c != nil && c.UserID != "" {
+		return c.UserID, true
+	}
+	return "", false
 }
