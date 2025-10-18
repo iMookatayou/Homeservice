@@ -42,7 +42,6 @@ class _LoginState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _submit() async {
-    // กันกดซ้ำ
     if (_busy) return;
     // validate form
     if (!_form.currentState!.validate()) return;
