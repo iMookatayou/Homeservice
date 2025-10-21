@@ -92,3 +92,16 @@ func UserIDFrom(r *http.Request) (string, bool) {
 	}
 	return "", false
 }
+
+func RequireAdmin(secret string, newClaims func() *Claims) func(http.Handler) http.Handler {
+	base := RequireAuth(secret, newClaims)
+	return func(next http.Handler) http.Handler {
+		return base(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if c := ClaimsFrom(r); c == nil || c.Role != "admin" {
+				http.Error(w, "forbidden", http.StatusForbidden)
+				return
+			}
+			next.ServeHTTP(w, r)
+		}))
+	}
+}

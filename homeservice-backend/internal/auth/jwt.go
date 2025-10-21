@@ -6,22 +6,17 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-const Issuer = "homeservice-api"
-
-type Claims struct {
-	UserID string `json:"uid"`
-	Email  string `json:"email"`
-	jwt.RegisteredClaims
+// คงฟังก์ชันเดิมไว้เพื่อไม่พังของเก่า (default role=user)
+func SignJWT(secret, uid, email string, ttl time.Duration) (string, error) {
+	return SignJWTWithRole(secret, uid, email, "user", ttl)
 }
 
-func (c *Claims) GetUserID() string { return c.UserID }
-func NewClaims() *Claims            { return &Claims{} }
-
-func SignJWT(secret, uid, email string, ttl time.Duration) (string, error) {
+func SignJWTWithRole(secret, uid, email, role string, ttl time.Duration) (string, error) {
 	now := time.Now().UTC()
 	claims := Claims{
 		UserID: uid,
 		Email:  email,
+		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Issuer:    Issuer,
 			Subject:   uid,

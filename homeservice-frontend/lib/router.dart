@@ -9,6 +9,7 @@ import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/home_screen.dart';
+import 'screens/notes_screen.dart';
 
 class GoRouterRefreshNotifier extends ChangeNotifier {
   GoRouterRefreshNotifier(this.ref) {
@@ -44,6 +45,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
 
       GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
+      GoRoute(path: '/notes', builder: (_, __) => const NotesScreen()),
     ],
 
     errorBuilder: (ctx, s) =>
