@@ -35,6 +35,7 @@ func (r Repo) List(ctx context.Context, userID string, f ListFilter) ([]Note, er
 
 	if f.Query != "" {
 		args = append(args, "%"+strings.TrimSpace(f.Query)+"%")
+		// เปลี่ยน body -> content
 		where = append(where, fmt.Sprintf("(title ILIKE $%d OR content ILIKE $%d)", len(args), len(args)))
 	}
 	if f.Category != nil {
@@ -48,7 +49,7 @@ func (r Repo) List(ctx context.Context, userID string, f ListFilter) ([]Note, er
 
 	args = append(args, f.Limit, f.Offset)
 	sql := `
-		SELECT id, title, content, category, pinned, created_by, created_at, updated_at
+		SELECT id, title, content, category, pinned, created_by, created_at, updated_at, done_at
 		FROM public.notes
 		WHERE ` + strings.Join(where, " AND ") + `
 		ORDER BY pinned DESC, updated_at DESC
@@ -63,7 +64,17 @@ func (r Repo) List(ctx context.Context, userID string, f ListFilter) ([]Note, er
 	var out []Note
 	for rows.Next() {
 		var n Note
-		if err := rows.Scan(&n.ID, &n.Title, &n.Content, &n.Category, &n.Pinned, &n.CreatedBy, &n.CreatedAt, &n.UpdatedAt); err != nil {
+		if err := rows.Scan(
+			&n.ID,
+			&n.Title,
+			&n.Content, // *string รองรับ NULL
+			&n.Category,
+			&n.Pinned,
+			&n.CreatedBy, // *string
+			&n.CreatedAt,
+			&n.UpdatedAt,
+			&n.DoneAt, // *time.Time
+		); err != nil {
 			return nil, err
 		}
 		out = append(out, n)
@@ -73,13 +84,16 @@ func (r Repo) List(ctx context.Context, userID string, f ListFilter) ([]Note, er
 
 func (r Repo) Get(ctx context.Context, userID, id string) (*Note, error) {
 	row := r.DB.QueryRow(ctx, `
-		SELECT id, title, content, category, pinned, created_by, created_at, updated_at
+		SELECT id, title, content, category, pinned, created_by, created_at, updated_at, done_at
 		FROM public.notes
 		WHERE id=$1 AND created_by=$2
 	`, id, userID)
 
 	var n Note
-	if err := row.Scan(&n.ID, &n.Title, &n.Content, &n.Category, &n.Pinned, &n.CreatedBy, &n.CreatedAt, &n.UpdatedAt); err != nil {
+	if err := row.Scan(
+		&n.ID, &n.Title, &n.Content, &n.Category, &n.Pinned,
+		&n.CreatedBy, &n.CreatedAt, &n.UpdatedAt, &n.DoneAt,
+	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -92,11 +106,14 @@ func (r Repo) Create(ctx context.Context, userID string, in CreateNoteReq) (*Not
 	row := r.DB.QueryRow(ctx, `
 		INSERT INTO public.notes (title, content, category, pinned, created_by)
 		VALUES ($1,$2,$3,$4,$5)
-		RETURNING id, title, content, category, pinned, created_by, created_at, updated_at
+		RETURNING id, title, content, category, pinned, created_by, created_at, updated_at, done_at
 	`, in.Title, in.Content, in.Category, in.Pinned, userID)
 
 	var n Note
-	if err := row.Scan(&n.ID, &n.Title, &n.Content, &n.Category, &n.Pinned, &n.CreatedBy, &n.CreatedAt, &n.UpdatedAt); err != nil {
+	if err := row.Scan(
+		&n.ID, &n.Title, &n.Content, &n.Category, &n.Pinned,
+		&n.CreatedBy, &n.CreatedAt, &n.UpdatedAt, &n.DoneAt,
+	); err != nil {
 		return nil, err
 	}
 	return &n, nil
@@ -111,7 +128,7 @@ func (r Repo) Update(ctx context.Context, userID, id string, in UpdateNoteReq) (
 	if in.Title != nil {
 		n.Title = *in.Title
 	}
-	if in.Content != nil { // content สามารถ set null ได้
+	if in.Content != nil { // nil=ไม่แก้, &nil=NULL, &""=ค่าว่าง
 		n.Content = *in.Content
 	}
 	if in.Category != nil {
@@ -125,11 +142,14 @@ func (r Repo) Update(ctx context.Context, userID, id string, in UpdateNoteReq) (
 		UPDATE public.notes
 		SET title=$1, content=$2, category=$3, pinned=$4, updated_at=now()
 		WHERE id=$5 AND created_by=$6
-		RETURNING id, title, content, category, pinned, created_by, created_at, updated_at
+		RETURNING id, title, content, category, pinned, created_by, created_at, updated_at, done_at
 	`, n.Title, n.Content, n.Category, n.Pinned, id, userID)
 
 	var out Note
-	if err := row.Scan(&out.ID, &out.Title, &out.Content, &out.Category, &out.Pinned, &out.CreatedBy, &out.CreatedAt, &out.UpdatedAt); err != nil {
+	if err := row.Scan(
+		&out.ID, &out.Title, &out.Content, &out.Category, &out.Pinned,
+		&out.CreatedBy, &out.CreatedAt, &out.UpdatedAt, &out.DoneAt,
+	); err != nil {
 		return nil, err
 	}
 	return &out, nil
@@ -151,11 +171,58 @@ func (r Repo) TogglePin(ctx context.Context, userID, id string, pin bool) (*Note
 		UPDATE public.notes
 		SET pinned=$1, updated_at=now()
 		WHERE id=$2 AND created_by=$3
-		RETURNING id, title, content, category, pinned, created_by, created_at, updated_at
+		RETURNING id, title, content, category, pinned, created_by, created_at, updated_at, done_at
 	`, pin, id, userID)
 
 	var n Note
-	if err := row.Scan(&n.ID, &n.Title, &n.Content, &n.Category, &n.Pinned, &n.CreatedBy, &n.CreatedAt, &n.UpdatedAt); err != nil {
+	if err := row.Scan(
+		&n.ID, &n.Title, &n.Content, &n.Category, &n.Pinned,
+		&n.CreatedBy, &n.CreatedAt, &n.UpdatedAt, &n.DoneAt,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &n, nil
+}
+
+// -------- เสร็จสิ้น / ยกเลิกเสร็จสิ้น --------
+
+func (r Repo) MarkDone(ctx context.Context, userID, id string) (*Note, error) {
+	row := r.DB.QueryRow(ctx, `
+		UPDATE public.notes
+		   SET done_at = now(), updated_at = now()
+		 WHERE id=$1 AND created_by=$2
+		 RETURNING id, title, content, category, pinned, created_by, created_at, updated_at, done_at
+	`, id, userID)
+
+	var n Note
+	if err := row.Scan(
+		&n.ID, &n.Title, &n.Content, &n.Category, &n.Pinned,
+		&n.CreatedBy, &n.CreatedAt, &n.UpdatedAt, &n.DoneAt,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &n, nil
+}
+
+func (r Repo) MarkUndone(ctx context.Context, userID, id string) (*Note, error) {
+	row := r.DB.QueryRow(ctx, `
+		UPDATE public.notes
+		   SET done_at = NULL, updated_at = now()
+		 WHERE id=$1 AND created_by=$2
+		 RETURNING id, title, content, category, pinned, created_by, created_at, updated_at, done_at
+	`, id, userID)
+
+	var n Note
+	if err := row.Scan(
+		&n.ID, &n.Title, &n.Content, &n.Category, &n.Pinned,
+		&n.CreatedBy, &n.CreatedAt, &n.UpdatedAt, &n.DoneAt,
+	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		}

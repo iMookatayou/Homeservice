@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:homeservice/config/env.dart';
 import 'token_storage.dart';
 
@@ -40,8 +41,7 @@ class ApiClient {
           if (fixed != originalPath) {
             assert(() {
               debugPrint(
-                '[api] ⚠️ auto-fix path: "$originalPath" -> "$fixed" '
-                '(base=$_baseUrl)',
+                '[api] ⚠️ auto-fix path: "$originalPath" -> "$fixed" (base=$_baseUrl)',
               );
               return true;
             }());
@@ -86,24 +86,40 @@ class ApiClient {
   }
 
   // ===== Public helpers (เรียก API v1 แบบ safe) =====
-  Future<Response<T>> getV1<T>(String path, {Map<String, dynamic>? query}) {
+  Future<Response<T>> getV1<T>(
+    String path, {
+    Map<String, dynamic>? query,
+    CancelToken? cancelToken,
+  }) {
     final p = _v1Path(path);
-    return dio.get<T>(p, queryParameters: query);
+    return dio.get<T>(p, queryParameters: query, cancelToken: cancelToken);
   }
 
-  Future<Response<T>> postV1<T>(String path, {dynamic data}) {
+  Future<Response<T>> postV1<T>(
+    String path, {
+    dynamic data,
+    CancelToken? cancelToken,
+  }) {
     final p = _v1Path(path);
-    return dio.post<T>(p, data: data);
+    return dio.post<T>(p, data: data, cancelToken: cancelToken);
   }
 
-  Future<Response<T>> putV1<T>(String path, {dynamic data}) {
+  Future<Response<T>> putV1<T>(
+    String path, {
+    dynamic data,
+    CancelToken? cancelToken,
+  }) {
     final p = _v1Path(path);
-    return dio.put<T>(p, data: data);
+    return dio.put<T>(p, data: data, cancelToken: cancelToken);
   }
 
-  Future<Response<T>> deleteV1<T>(String path, {dynamic data}) {
+  Future<Response<T>> deleteV1<T>(
+    String path, {
+    dynamic data,
+    CancelToken? cancelToken,
+  }) {
     final p = _v1Path(path);
-    return dio.delete<T>(p, data: data);
+    return dio.delete<T>(p, data: data, cancelToken: cancelToken);
   }
 
   // ===== Internals =====
@@ -255,3 +271,13 @@ class ApiClient {
     );
   }
 }
+
+// ===== Providers =====
+final tokenStorageProvider = Provider<TokenStorage>((ref) {
+  return TokenStorage(); // ใช้ implementation ของคุณได้เลย
+});
+
+final apiClientProvider = Provider<ApiClient>((ref) {
+  final ts = ref.read(tokenStorageProvider);
+  return ApiClient(tokenStorage: ts);
+});

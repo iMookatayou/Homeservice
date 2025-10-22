@@ -1,37 +1,48 @@
+// lib/models/note.dart
 class Note {
   final String id;
-  final String title;
-  final String body;
+  final String title; // หัวข้อจริง
+  final String body; // เนื้อหา (มาจาก content)
+  final String? category;
   final List<String> tags;
-  final String? link;
+  final bool? pinned;
   final DateTime createdAt;
+  final DateTime? dueAt;
+  final DateTime? doneAt;
 
-  const Note({
+  Note({
     required this.id,
     required this.title,
     required this.body,
-    required this.tags,
-    this.link,
     required this.createdAt,
+    this.category,
+    this.tags = const [],
+    this.pinned,
+    this.dueAt,
+    this.doneAt,
   });
 
-  factory Note.fromJson(Map<String, dynamic> j) {
-    return Note(
-      id: j['id'] as String,
-      title: j['title'] as String,
-      body: j['body'] as String,
-      tags: (j['tags'] as List).map((e) => e.toString()).toList(),
-      link: j['link'] as String?,
-      createdAt: DateTime.parse(j['created_at'] as String),
-    );
-  }
+  factory Note.fromJson(Map<String, dynamic> j) => Note(
+    id: j['id'] as String,
+    title: (j['title'] ?? '').toString(), // ✅ title
+    body: (j['content'] ?? j['body'] ?? '').toString(), // ✅ content → body
+    category: (j['category'] as String?)?.toLowerCase(),
+    tags: (j['tags'] as List?)?.map((e) => e.toString()).toList() ?? const [],
+    pinned: j['pinned'] as bool?,
+    createdAt: DateTime.parse(j['created_at']),
+    dueAt: j['due_at'] != null ? DateTime.parse(j['due_at']) : null,
+    doneAt: j['done_at'] != null ? DateTime.parse(j['done_at']) : null,
+  );
 
   Map<String, dynamic> toJson() => {
     'id': id,
     'title': title,
-    'body': body,
+    'content': body, // ✅ ส่งกลับเป็น content
+    'category': category,
     'tags': tags,
-    'link': link,
+    'pinned': pinned,
     'created_at': createdAt.toIso8601String(),
+    'due_at': dueAt?.toIso8601String(),
+    'done_at': doneAt?.toIso8601String(),
   };
 }
