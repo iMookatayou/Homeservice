@@ -17,7 +17,6 @@ import (
 	"github.com/yourname/homeservice-backend/internal/user"
 	"github.com/yourname/homeservice-backend/internal/weather"
 
-	// new
 	"github.com/yourname/homeservice-backend/internal/files"
 	"github.com/yourname/homeservice-backend/internal/purchases"
 	"github.com/yourname/homeservice-backend/internal/storage"
