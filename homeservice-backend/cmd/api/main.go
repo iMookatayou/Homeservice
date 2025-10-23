@@ -71,7 +71,6 @@ func main() {
 		api.Post("/auth/login", uHandler.Login)
 		api.Get("/weather/today", wHandler.Today)
 
-		// auth-required
 		api.Group(func(pr chi.Router) {
 			pr.Use(auth.RequireAuth(cfg.JWTSecret, auth.NewClaims))
 			pr.Get("/me", uHandler.Me)
