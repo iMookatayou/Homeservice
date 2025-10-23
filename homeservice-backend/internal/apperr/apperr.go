@@ -10,7 +10,6 @@ type AppError struct {
 
 func (e *AppError) Error() string { return e.Message }
 
-// pre-defined
 var (
 	ErrBadRequest   = &AppError{Code: "BAD_REQUEST", Message: "bad request", Status: http.StatusBadRequest}
 	ErrUnauthorized = &AppError{Code: "UNAUTHORIZED", Message: "unauthorized", Status: http.StatusUnauthorized}
