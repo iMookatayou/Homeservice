@@ -52,7 +52,7 @@ func (h Handler) UploadLocal(w http.ResponseWriter, r *http.Request) {
 
 	mtype := header.Header.Get("Content-Type")
 	if mtype == "" {
-		mtype = mime.TypeByExtension(filepath.Ext(header.Filename)) // ต้องใส่ .ext ไม่ใช่ทั้งชื่อไฟล์
+		mtype = mime.TypeByExtension(filepath.Ext(header.Filename)) 
 	}
 	if !allowMIME(mtype) {
 		httputil.Error(w, http.StatusBadRequest, "BAD_REQUEST", "unsupported mimetype", "")
