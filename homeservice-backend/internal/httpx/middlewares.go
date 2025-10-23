@@ -8,7 +8,6 @@ import (
 	"github.com/go-chi/cors"
 )
 
-// SecurityHeaders: เสริมความปลอดภัยฝั่งบราวเซอร์
 func SecurityHeaders(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Security / clickjacking / MIME
