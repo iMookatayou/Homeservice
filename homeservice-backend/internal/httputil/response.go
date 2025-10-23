@@ -13,7 +13,7 @@ type Envelope struct {
 }
 
 type ErrResp struct {
-	Code    string `json:"code"`   // e.g. "BAD_REQUEST", "NOT_FOUND"
+	Code    string `json:"code"` 
 	Detail  string `json:"detail"` // human msg (safe to show UI)
 	TraceID string `json:"trace_id,omitempty"`
 }
