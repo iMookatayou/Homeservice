@@ -114,7 +114,6 @@ func (h Handler) Presign(w http.ResponseWriter, r *http.Request) {
 		httputil.Error(w, http.StatusBadRequest, "BAD_REQUEST", "invalid mimetype", "")
 		return
 	}
-	// local backend ไม่รองรับ presign
 	httputil.Error(w, http.StatusNotImplemented, "NOT_SUPPORTED", "presign not supported for local storage", "")
 }
 
