@@ -79,7 +79,6 @@ func main() {
 
 			fHandler.RegisterRoutes(pr)
 
-			// purchases attachments
 			attHandler.RegisterRoutes(pr)
 		})
 
