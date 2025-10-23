@@ -67,7 +67,6 @@ func main() {
 	r.Get("/readyz", health.Ready)
 
 	r.Route("/api/v1", func(api chi.Router) {
-		// public
 		api.Post("/auth/register", uHandler.Register)
 		api.Post("/auth/login", uHandler.Login)
 		api.Get("/weather/today", wHandler.Today)
