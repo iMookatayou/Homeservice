@@ -82,7 +82,6 @@ func main() {
 			attHandler.RegisterRoutes(pr)
 		})
 
-		// admin-only
 		api.Group(func(ad chi.Router) {
 			ad.Use(auth.RequireAdmin(cfg.JWTSecret, auth.NewClaims))
 			adminHandler.RegisterRoutes(ad)
