@@ -14,7 +14,7 @@ type Envelope struct {
 
 type ErrResp struct {
 	Code    string `json:"code"` 
-	Detail  string `json:"detail"` // human msg (safe to show UI)
+	Detail  string `json:"detail"` 
 	TraceID string `json:"trace_id,omitempty"`
 }
 
