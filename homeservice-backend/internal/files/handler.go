@@ -72,7 +72,6 @@ func (h Handler) UploadLocal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// --- Save to storage (local) ---
 	put, err := h.Storage.Save(r.Context(), uid, file, header.Filename, mtype, size)
 	if err != nil {
 		httputil.Error(w, http.StatusBadGateway, "UPLOAD_FAILED", err.Error(), "")
