@@ -3,7 +3,7 @@ package apperr
 import "net/http"
 
 type AppError struct {
-	Code    string // machine-readable
+	Code    string 
 	Message string // human-readable
 	Status  int
 }
