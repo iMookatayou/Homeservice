@@ -7,7 +7,7 @@ const Issuer = "homeservice-api"
 type Claims struct {
 	UserID string `json:"uid"`
 	Email  string `json:"email"`
-	Role   string `json:"role"` // "user" | "admin"
+	Role   string `json:"role"`
 	jwt.RegisteredClaims
 }
 
