@@ -67,7 +67,7 @@ func (h Handler) UploadLocal(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
-	if size <= 0 || size > (25<<20) { // 25MB
+	if size <= 0 || size > (25<<20) { 
 		httputil.Error(w, http.StatusBadRequest, "BAD_REQUEST", "invalid file size", "")
 		return
 	}
