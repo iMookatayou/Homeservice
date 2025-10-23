@@ -78,7 +78,6 @@ func (h Handler) UploadLocal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// --- Record (ใช้เฉพาะฟิลด์ที่มีใน type File เดิม) ---
 	rec := &File{
 		OwnerID:    uid,
 		Filename:   put.Filename,
