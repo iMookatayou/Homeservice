@@ -59,7 +59,6 @@ func (h Handler) UploadLocal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// --- Size resolve: header → override ด้วย form value ได้ ---
 	size := header.Size
 	if size <= 0 {
 		if v := r.FormValue("size"); v != "" {
