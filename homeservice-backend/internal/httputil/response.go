@@ -8,7 +8,7 @@ import (
 type Envelope struct {
 	Status  string      `json:"status"`         
 	Data    interface{} `json:"data,omitempty"`  
-	Error   *ErrResp    `json:"error,omitempty"` // normalized error
+	Error   *ErrResp    `json:"error,omitempty"` 
 	Message string      `json:"message,omitempty"`
 }
 
