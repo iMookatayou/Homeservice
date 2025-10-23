@@ -42,7 +42,6 @@ func main() {
 
 	wHandler := weather.Handler{}
 
-	// storage & new modules
 	st := storage.New(cfg)
 
 	fRepo := files.Repo{DB: pool}
