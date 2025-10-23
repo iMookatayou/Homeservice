@@ -21,7 +21,6 @@ type Handler struct {
 }
 
 func (h Handler) RegisterRoutes(r chi.Router) {
-	// local upload
 	r.Post("/uploads", h.UploadLocal)
 	// s3 presign (ยังไม่รองรับใน LocalStorage -> จะส่ง 501)
 	r.Post("/uploads/presign", h.Presign)
