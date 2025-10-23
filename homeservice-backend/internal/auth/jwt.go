@@ -6,7 +6,6 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-// คงฟังก์ชันเดิมไว้เพื่อไม่พังของเก่า (default role=user)
 func SignJWT(secret, uid, email string, ttl time.Duration) (string, error) {
 	return SignJWTWithRole(secret, uid, email, "user", ttl)
 }
