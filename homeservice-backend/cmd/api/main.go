@@ -77,7 +77,6 @@ func main() {
 
 			nHandler.RegisterRoutes(pr)
 
-			// uploads/files
 			fHandler.RegisterRoutes(pr)
 
 			// purchases attachments
