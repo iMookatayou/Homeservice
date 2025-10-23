@@ -6,7 +6,7 @@ import (
 )
 
 type Envelope struct {
-	Status  string      `json:"status"`          // "success" | "error"
+	Status  string      `json:"status"`         
 	Data    interface{} `json:"data,omitempty"`  // payload
 	Error   *ErrResp    `json:"error,omitempty"` // normalized error
 	Message string      `json:"message,omitempty"`
