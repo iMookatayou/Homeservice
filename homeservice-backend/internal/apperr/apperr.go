@@ -4,7 +4,7 @@ import "net/http"
 
 type AppError struct {
 	Code    string 
-	Message string // human-readable
+	Message string 
 	Status  int
 }
 
