@@ -8,7 +8,6 @@ import '../state/weather_provider.dart';
 import '../models/weather.dart';
 
 class AppColors {
-  // Hospital-ish, government-clean
   static const deepNavy = Color(0xFF0F2D5C);
   static const softBlue = Color(0xFF2D5BFF);
   static const mint = Color(0xFF14B8A6);
@@ -31,7 +30,7 @@ class HomeScreen extends ConsumerWidget {
         backgroundColor: Colors.white,
         foregroundColor: AppColors.deepNavy,
         titleSpacing: 16,
-        title: const Text('Home Service Dashboard'),
+        title: const Text('HomeService'),
         actions: [
           IconButton(
             tooltip: 'Logout',
@@ -59,18 +58,15 @@ class HomeScreen extends ConsumerWidget {
             _SectionCard(
               title: 'Current Weather',
               subtitle: 'Local conditions',
-              trailing: _AutoSyncChip(),
+              trailing: const _AutoSyncChip(),
               child: _WeatherBody(weather: weather),
             ),
             const SizedBox(height: 16),
-
-            // ===== Quick Tools (new UX) =====
             _SectionCard(
-              title: 'Quick Tools',
-              subtitle: 'Tap a tool to get started',
+              title: 'Tools',
+              subtitle: 'Manage your home quickly',
               child: const _QuickToolsSection(),
             ),
-
             const SizedBox(height: 16),
           ],
         ),
@@ -232,7 +228,6 @@ class _SectionHeader extends StatelessWidget {
 
 class _AutoSyncChip extends ConsumerWidget {
   const _AutoSyncChip({super.key});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return const _PillChip(
@@ -303,14 +298,15 @@ class _WeatherBody extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Top row: temperature + condition
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _MetricTile(
-                  icon: Icons.thermostat_outlined,
-                  title: 'Temperature',
-                  value: '${w.temperature.toStringAsFixed(1)} °C',
+                Expanded(
+                  child: _MetricTile(
+                    icon: Icons.thermostat_outlined,
+                    title: 'Temperature',
+                    value: '${w.temperature.toStringAsFixed(1)} °C',
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -323,7 +319,6 @@ class _WeatherBody extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 12),
-            // Bottom row: wind + updated
             Row(
               children: [
                 Expanded(
@@ -361,35 +356,33 @@ class _MetricTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: const Color(0xFFF7FAFF),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.cardBorder),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 22, color: AppColors.softBlue),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: AppColors.deepNavy,
-                fontWeight: FontWeight.w700,
-              ),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF7FAFF),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.cardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 22, color: AppColors.softBlue),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: AppColors.deepNavy,
+              fontWeight: FontWeight.w700,
             ),
-            const SizedBox(height: 2),
-            Text(
-              title,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
+          ),
+        ],
       ),
     );
   }
@@ -491,7 +484,7 @@ class _EmptyState extends StatelessWidget {
 }
 
 // ===================================================================
-// =====================  NEW: Quick Tools Section  ===================
+// =====================  Quick Tools (TH captions)  ==================
 // ===================================================================
 
 class _QuickToolsSection extends StatelessWidget {
@@ -499,140 +492,73 @@ class _QuickToolsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // กลุ่มปุ่มหลักที่ผู้ใช้ขอให้มี
-    final essentials = [
+    final items = <_ToolItem>[
       const _ToolItem(
-        Icons.handyman, // รายชื่อช่าง
+        Icons.handyman,
         'Contractors',
         '/contractors',
-        'Browse service providers',
+        'เรียกช่างถึงบ้าน',
       ),
       const _ToolItem(
-        Icons.event_note, // จดบันทึกสำคัญ
+        Icons.event_note,
         'Important Notes',
         '/notes',
-        'Save key notes',
+        'บันทึกสำคัญกันลืม',
       ),
       const _ToolItem(
-        Icons.videocam_outlined, // กล้องที่บ้าน
+        Icons.videocam_outlined,
         'Home Cameras',
         '/cameras',
-        'View live feeds',
+        'ดูกล้องวงจรปิดที่บ้าน',
       ),
       const _ToolItem(
-        Icons.shopping_cart_checkout, // ของใช้ที่บ้านซื้ออะไรบ้าง
+        Icons.shopping_cart_checkout,
         'Purchases',
         '/purchases',
-        'Track household buys',
-      ),
-    ];
-
-    // ปุ่มทั่วไปเดิม + ที่เกี่ยวข้อง
-    final general = [
-      const _ToolItem(
-        Icons.map_rounded,
-        'Nearby Map',
-        '/map',
-        'Find shops & services',
+        'ติดตามของที่ซื้อเข้าบ้าน',
       ),
       const _ToolItem(
-        Icons.restaurant_menu,
-        'Food Tracker',
-        '/food',
-        'Log daily meals',
+        Icons.receipt_long,
+        'Bills',
+        '/bills',
+        'บิลค่าใช้จ่ายประจำ',
+      ),
+      const _ToolItem(Icons.calculate, 'Calculator', '/calc', 'เครื่องคิดเลข'),
+      const _ToolItem(
+        Icons.medical_services_outlined,
+        'Medicine Stock',
+        '/meds',
+        'เช็คสต็อกยาประจำบ้าน',
       ),
       const _ToolItem(
-        Icons.calculate,
-        'Calculator',
-        '/calc',
-        'Quick calculations',
-      ),
-      const _ToolItem(
-        Icons.photo_camera_outlined,
-        'Camera',
-        '/camera',
-        'Scan or capture',
-      ),
-      const _ToolItem(Icons.task_alt, 'Tasks', '/tasks', 'To-dos & reminders'),
-      const _ToolItem(Icons.receipt_long, 'Bills', '/bills', 'Pay & reminders'),
-      const _ToolItem(
-        Icons.local_shipping_outlined,
-        'Packages',
-        '/packages',
-        'Deliveries & returns',
-      ),
-      const _ToolItem(
-        Icons.settings_suggest_outlined,
-        'Settings',
-        '/settings',
-        'App preferences',
+        Icons.trending_up,
+        'Household Stocks',
+        '/stocks',
+        'หุ้นน่าซื้อประจำบ้าน',
       ),
     ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Search bar ที่พุ่งไปหน้ารายชื่อช่างโดยตรง
         _LauncherSearch(
           hintText: 'Search contractors (electrician, plumber, AC...)',
           onSubmit: (q) => _goTo(context, '/contractors', query: q),
         ),
         const SizedBox(height: 12),
-
-        // กลุ่ม Essential เด่นขึ้น (การ์ดใหญ่)
-        _GroupHeader(label: 'Essentials'),
-        const SizedBox(height: 8),
-        _ToolGrid(items: essentials, large: true),
-        const SizedBox(height: 14),
-
-        // ชิปหมวดหมู่ช่าง กดแล้วไปหน้าเดียวกันพร้อม filter
-        _GroupHeader(label: 'Contractor Categories'),
-        const SizedBox(height: 8),
-        _ContractorChips(
-          onTap: (slug) => _goTo(context, '/contractors', category: slug),
-        ),
-        const SizedBox(height: 14),
-
-        // กลุ่มทั่วไป (การ์ดมาตรฐาน)
-        _GroupHeader(label: 'More Tools'),
-        const SizedBox(height: 8),
-        _ToolGrid(items: general),
+        _ToolGrid(items: items, large: true),
       ],
     );
   }
 
-  void _goTo(
-    BuildContext context,
-    String route, {
-    String? query,
-    String? category,
-  }) {
-    // ส่งพารามไว้ใน queryParameters ถ้าระบบ router รองรับ
-    // ถ้าใช้ go_router 10+ สามารถใช้ state.extra หรือ queryParameters
+  void _goTo(BuildContext context, String route, {String? query}) {
     final uri = Uri(
       path: route,
       queryParameters: {
         if (query != null && query.trim().isNotEmpty) 'q': query.trim(),
-        if (category != null && category.trim().isNotEmpty)
-          'cat': category.trim(),
       },
     ).toString();
     context.push(uri);
-  }
-}
-
-class _GroupHeader extends StatelessWidget {
-  const _GroupHeader({required this.label});
-  final String label;
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      label,
-      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-        color: AppColors.deepNavy,
-        fontWeight: FontWeight.w700,
-      ),
-    );
   }
 }
 
@@ -679,58 +605,6 @@ class _LauncherSearchState extends State<_LauncherSearch> {
   }
 }
 
-class _ContractorChips extends StatelessWidget {
-  const _ContractorChips({required this.onTap});
-  final void Function(String slug) onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    const cats = <(IconData, String, String)>[
-      (Icons.electrical_services, 'Electrician', 'electrician'),
-      (Icons.water_damage_outlined, 'Plumber', 'plumber'),
-      (Icons.ac_unit, 'AC & HVAC', 'hvac'),
-      (Icons.build_circle_outlined, 'General Repair', 'general'),
-      (Icons.carpenter, 'Carpenter', 'carpenter'),
-      (Icons.pest_control_outlined, 'Pest Control', 'pest'),
-      (Icons.brush_outlined, 'Painter', 'painter'),
-      (Icons.local_gas_station, 'Gas/Heater', 'gas'),
-    ];
-
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        for (final c in cats)
-          GestureDetector(
-            onTap: () => onTap(c.$3),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: AppColors.cardBorder),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(c.$1, size: 18, color: AppColors.softBlue),
-                  const SizedBox(width: 6),
-                  Text(
-                    c.$2,
-                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                      color: AppColors.deepNavy,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
 class _ToolGrid extends StatelessWidget {
   const _ToolGrid({required this.items, this.large = false});
 
@@ -739,8 +613,6 @@ class _ToolGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // การ์ดใหญ่: ไอคอน 36 / font ใหญ่ / aspect ratio 1.1
-    // การ์ดปกติ: ไอคอน 30 / aspect ratio 1.25
     final iconSize = large ? 36.0 : 30.0;
     final aspect = large ? 1.1 : 1.25;
 

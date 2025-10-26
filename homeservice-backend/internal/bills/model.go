@@ -1,29 +1,31 @@
 package bills
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type Bill struct {
-	ID                 string     `json:"id"`
-	Type               string     `json:"type"` // bill_type enum: electric|water|internet
+	ID                 uuid.UUID  `json:"id"`
+	Type               string     `json:"type"`
 	Title              string     `json:"title"`
 	Amount             float64    `json:"amount"`
 	BillingPeriodStart *time.Time `json:"billing_period_start,omitempty"`
 	BillingPeriodEnd   *time.Time `json:"billing_period_end,omitempty"`
-	DueDate            *time.Time `json:"due_date,omitempty"`
-	Status             string     `json:"status"` // bill_status enum: unpaid|paid|overdue
+	DueDate            time.Time  `json:"due_date"`
+	Status             string     `json:"status"`
 	PaidAt             *time.Time `json:"paid_at,omitempty"`
 	Note               *string    `json:"note,omitempty"`
-	CreatedBy          string     `json:"created_by"`
+	CreatedBy          uuid.UUID  `json:"created_by"`
 	CreatedAt          time.Time  `json:"created_at"`
 	UpdatedAt          time.Time  `json:"updated_at"`
 }
 
-type CreateBillReq struct {
-	Type        string  `json:"type" validate:"required,oneof=electric water internet"`
-	Title       string  `json:"title" validate:"required,min=1"`
-	Amount      float64 `json:"amount" validate:"required,gt=0"`
-	DueDate     *string `json:"due_date,omitempty"` // RFC3339 or YYYY-MM-DD
-	Note        *string `json:"note,omitempty"`
-	PeriodStart *string `json:"billing_period_start,omitempty"`
-	PeriodEnd   *string `json:"billing_period_end,omitempty"`
+type Summary struct {
+	Type        string  `json:"type"`
+	TotalAmount float64 `json:"total_amount"`
+	TotalPaid   float64 `json:"total_paid"`
+	TotalUnpaid float64 `json:"total_unpaid"`
+	Count       int     `json:"count"`
 }

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yourname/homeservice-backend/internal/auth"
+	"github.com/iMookatayou/homeservice-backend/internal/auth"
 )
 
 type Handler struct {

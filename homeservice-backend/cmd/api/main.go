@@ -8,19 +8,21 @@ import (
 	"github.com/go-chi/chi/v5"
 	"go.uber.org/zap"
 
-	"github.com/yourname/homeservice-backend/internal/auth"
-	"github.com/yourname/homeservice-backend/internal/config"
-	"github.com/yourname/homeservice-backend/internal/db"
-	"github.com/yourname/homeservice-backend/internal/health"
-	"github.com/yourname/homeservice-backend/internal/httpx"
-	"github.com/yourname/homeservice-backend/internal/notes"
-	"github.com/yourname/homeservice-backend/internal/user"
-	"github.com/yourname/homeservice-backend/internal/weather"
+	"github.com/iMookatayou/homeservice-backend/internal/auth"
+	"github.com/iMookatayou/homeservice-backend/internal/config"
+	"github.com/iMookatayou/homeservice-backend/internal/db"
+	"github.com/iMookatayou/homeservice-backend/internal/health"
+	"github.com/iMookatayou/homeservice-backend/internal/httpx"
+	"github.com/iMookatayou/homeservice-backend/internal/notes"
+	"github.com/iMookatayou/homeservice-backend/internal/user"
+	"github.com/iMookatayou/homeservice-backend/internal/weather"
 
-	// new
-	"github.com/yourname/homeservice-backend/internal/files"
-	"github.com/yourname/homeservice-backend/internal/purchases"
-	"github.com/yourname/homeservice-backend/internal/storage"
+	// new modules
+	"github.com/iMookatayou/homeservice-backend/internal/bills"
+	"github.com/iMookatayou/homeservice-backend/internal/contractors"
+	"github.com/iMookatayou/homeservice-backend/internal/files"
+	"github.com/iMookatayou/homeservice-backend/internal/purchases"
+	"github.com/iMookatayou/homeservice-backend/internal/storage"
 )
 
 func main() {
@@ -35,26 +37,41 @@ func main() {
 	}
 	defer pool.Close()
 
+	// --- users/auth ---
 	uRepo := user.Repo{DB: pool}
 	uHandler := user.Handler{Repo: uRepo, JWTSecret: cfg.JWTSecret}
 
+	// --- notes ---
 	nRepo := notes.Repo{DB: pool}
 	nHandler := notes.Handler{Repo: nRepo}
 
+	// --- weather (stateless) ---
 	wHandler := weather.Handler{}
 
-	// storage & new modules
+	// --- storage/files ---
 	st := storage.New(cfg)
-
 	fRepo := files.Repo{DB: pool}
 	fHandler := files.Handler{Repo: fRepo, Storage: st, JWTSecret: cfg.JWTSecret}
 
-	attRepo := purchases.AttachRepo{DB: pool}
-	attHandler := purchases.AttachHandler{Repo: attRepo, JWTSecret: cfg.JWTSecret}
+	// --- purchases (ใหม่: repo + service + registrar เดียว) ---
+	pRepo := purchases.NewRepo(pool)
+	pSvc := purchases.NewService(pRepo)
+	pHandler := purchases.Handler{Svc: pSvc}
+	pRegistrar := purchases.Registrar{H: pHandler}
 
-	adminRepo := purchases.AdminRepo{DB: pool}
-	adminHandler := purchases.AdminHandler{Repo: adminRepo, JWTSecret: cfg.JWTSecret}
+	// --- contractors (Overpass API, no map SDK) ---
+	httpClient := &http.Client{Timeout: 15 * time.Second}
+	ctrRepo := contractors.NewRepo(10 * time.Minute)          // in-memory cache
+	ctrSvc := contractors.NewService(httpClient, ctrRepo, "") // default Overpass endpoint
+	ctrH := contractors.Handler{Svc: ctrSvc}
 
+	// --- bills ---
+	bRepo := bills.Repo{DB: pool}
+	bSvc := bills.NewService(bRepo)
+	bHandler := bills.Handler{Svc: bSvc}
+	bRegistrar := bills.Registrar{H: bHandler}
+
+	// --- router & middlewares ---
 	r := chi.NewRouter()
 	for _, m := range httpx.CommonMiddlewares(cfg.CorsOrigin) {
 		r.Use(m)
@@ -66,33 +83,39 @@ func main() {
 		r.Handle("/static/*", fs)
 	}
 
+	// health
 	r.Get("/healthz", health.Live)
 	r.Get("/readyz", health.Ready)
 
+	// API v1
 	r.Route("/api/v1", func(api chi.Router) {
-		// public
+		// --- public ---
 		api.Post("/auth/register", uHandler.Register)
 		api.Post("/auth/login", uHandler.Login)
 		api.Get("/weather/today", wHandler.Today)
 
-		// auth-required
+		// contractors search (public)
+		ctrH.RegisterRoutes(api)
+
+		// --- auth-required ---
 		api.Group(func(pr chi.Router) {
 			pr.Use(auth.RequireAuth(cfg.JWTSecret, auth.NewClaims))
 			pr.Get("/me", uHandler.Me)
 
 			nHandler.RegisterRoutes(pr)
-
-			// uploads/files
 			fHandler.RegisterRoutes(pr)
 
-			// purchases attachments
-			attHandler.RegisterRoutes(pr)
+			// purchases (ทั้งหมดอยู่ใน handler เดียว)
+			pRegistrar.Register(pr)
+
+			// bills
+			bRegistrar.Register(pr)
 		})
 
-		// admin-only
+		// --- admin-only (ถ้ามี endpoint เฉพาะ admin ในอนาคต คุมด้วย middleware นี้) ---
 		api.Group(func(ad chi.Router) {
 			ad.Use(auth.RequireAdmin(cfg.JWTSecret, auth.NewClaims))
-			adminHandler.RegisterRoutes(ad)
+			// ปัจจุบัน purchases ไม่มี admin handler แยกแล้ว
 		})
 	})
 

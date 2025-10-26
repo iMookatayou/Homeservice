@@ -4,8 +4,8 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/yourname/homeservice-backend/internal/auth"
-	"github.com/yourname/homeservice-backend/internal/httpx"
+	"github.com/iMookatayou/homeservice-backend/internal/auth"
+	"github.com/iMookatayou/homeservice-backend/internal/httpx"
 )
 
 type Handler struct{ Repo Repo }

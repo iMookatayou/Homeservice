@@ -39,3 +39,7 @@ windows/flutter/ephemeral/
 # --- VSCode/IDE ---
 .idea/
 # .vscode/   # ถ้าไม่อยาก commit ก็ uncomment บรรทัดนี้
+
+.env.development
+.env.production
+.env.staging

@@ -9,9 +9,9 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/yourname/homeservice-backend/internal/auth"
-	"github.com/yourname/homeservice-backend/internal/httputil"
-	"github.com/yourname/homeservice-backend/internal/storage"
+	"github.com/iMookatayou/homeservice-backend/internal/auth"
+	"github.com/iMookatayou/homeservice-backend/internal/httputil"
+	"github.com/iMookatayou/homeservice-backend/internal/storage"
 )
 
 type Handler struct {

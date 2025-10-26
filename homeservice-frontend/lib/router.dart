@@ -4,12 +4,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'state/auth_state.dart';
+
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/notes_screen.dart';
+import 'screens/contractors_screen.dart';
+
+// Purchases
+import 'screens/purchase_screen.dart';
+import 'screens/purchase_detail_screen.dart';
+import 'screens/purchase_form_screen.dart';
+
+// Bills
+import 'screens/bills_screen.dart';
+import 'screens/bill_form_screen.dart';
+import 'screens/bills_summary_screen.dart';
+import 'screens/bill_detail_screen.dart';
+
+import 'models/bill.dart';
 
 class GoRouterRefreshNotifier extends ChangeNotifier {
   GoRouterRefreshNotifier(this.ref) {
@@ -32,6 +47,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: GoRouterRefreshNotifier(ref),
 
     routes: [
+      // ---------- Public ----------
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
@@ -44,8 +60,60 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const ForgotPasswordScreen(),
       ),
 
+      // ---------- Private ----------
       GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
       GoRoute(path: '/notes', builder: (_, __) => const NotesScreen()),
+      GoRoute(
+        path: '/contractors',
+        builder: (_, __) => const ContractorsScreen(),
+      ),
+
+      // ===== Purchases module =====
+      GoRoute(
+        path: '/purchases',
+        builder: (_, __) => const PurchaseScreen(),
+        routes: [
+          // /purchases/new  -> create
+          GoRoute(
+            path: 'new',
+            builder: (_, __) =>
+                const PurchaseFormScreen(mode: PurchaseFormMode.create),
+          ),
+          // /purchases/:id  -> detail
+          GoRoute(
+            path: ':id',
+            builder: (_, st) =>
+                PurchaseDetailScreen(id: st.pathParameters['id']!),
+            routes: [
+              // /purchases/:id/edit -> edit
+              GoRoute(
+                path: 'edit',
+                builder: (_, st) => PurchaseFormScreen(
+                  mode: PurchaseFormMode.edit,
+                  id: st.pathParameters['id']!,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+
+      /// ==== Bills module ====
+      GoRoute(
+        path: '/bills',
+        builder: (_, __) => const BillsScreen(),
+        routes: [
+          GoRoute(path: 'new', builder: (_, __) => const BillFormScreen()),
+          GoRoute(
+            path: 'summary',
+            builder: (_, __) => const BillsSummaryScreen(),
+          ),
+          GoRoute(
+            path: ':id',
+            builder: (_, st) => BillDetailScreen(bill: st.extra as Bill),
+          ),
+        ],
+      ),
     ],
 
     errorBuilder: (ctx, s) =>
@@ -56,28 +124,24 @@ final routerProvider = Provider<GoRouter>((ref) {
       final auth = ref.read(authProvider);
 
       debugPrint(
-        '[router] redirect check path=$path loading=${auth.loading} authed=${auth.isAuthenticated}',
+        '[router] redirect check path=$path '
+        'loading=${auth.loading} authed=${auth.isAuthenticated}',
       );
 
       if (auth.loading) return null;
 
-      // แยก splash ออก ไม่ให้ถือเป็น public ที่อนุญาตค้างได้
       final onSplash = path == '/splash';
       const public = {'/login', '/register', '/forgot', '/forgotpassword'};
 
       if (!auth.isAuthenticated) {
-        // ถ้ายังไม่ล็อกอินและอยู่ splash → บังคับไป login
         if (onSplash) return '/login';
-        // ถ้าไม่ใช่หน้า public → บังคับไป login
         if (!public.contains(path)) return '/login';
-        return null; // อนุญาตอยู่ที่หน้า public อื่น ๆ
+        return null;
       }
 
-      // ล็อกอินแล้ว → กันกลับไป splash/login
       if (auth.isAuthenticated && (onSplash || public.contains(path))) {
         return '/home';
       }
-
       return null;
     },
   );

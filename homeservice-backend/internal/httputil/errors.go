@@ -3,7 +3,7 @@ package httputil
 import (
 	"net/http"
 
-	"github.com/yourname/homeservice-backend/internal/apperr"
+	"github.com/iMookatayou/homeservice-backend/internal/apperr"
 )
 
 func FromError(w http.ResponseWriter, err error, traceID string) {

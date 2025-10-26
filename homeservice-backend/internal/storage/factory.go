@@ -1,6 +1,6 @@
 package storage
 
-import "github.com/yourname/homeservice-backend/internal/config"
+import "github.com/iMookatayou/homeservice-backend/internal/config"
 
 func New(cfg config.Config) Service {
 	switch cfg.StorageBackend {

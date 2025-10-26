@@ -5,84 +5,77 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/yourname/homeservice-backend/internal/auth"
-	"github.com/yourname/homeservice-backend/internal/httpx"
+	"github.com/go-chi/render"
+	"github.com/google/uuid"
+
+	// ปรับ import ให้ตรงกับโมดูล auth ของคุณ
+	"github.com/iMookatayou/homeservice-backend/internal/auth"
 )
 
 type Handler struct {
-	Repo Repo
+	Svc Service
 }
 
 func (h Handler) RegisterRoutes(r chi.Router) {
-	r.Route("/bills", func(r chi.Router) {
-		r.Post("/", h.Create)      // POST /api/v1/bills
-		r.Post("/{id}/pay", h.Pay) // POST /api/v1/bills/{id}/pay
-		r.Get("/", h.List)         // GET  /api/v1/bills?limit=20
-	})
+	r.Post("/bills", h.createBill)
+	r.Get("/bills", h.listBills)
+	r.Get("/bills/summary", h.summary)
 }
 
-func (h Handler) Create(w http.ResponseWriter, r *http.Request) {
-	var req CreateBillReq
-	if err := httpx.BindJSON(r, &req); err != nil {
-		httpx.WriteJSONError(w, http.StatusBadRequest, "validation failed", httpx.ValidationErrors(err))
+func (h Handler) createBill(w http.ResponseWriter, r *http.Request) {
+	var req Bill
+	if err := render.DecodeJSON(r.Body, &req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
-	claims := auth.ClaimsFrom(r)
-	if claims == nil {
-		httpx.WriteJSONError(w, http.StatusUnauthorized, "unauthorized", nil)
+	now := time.Now()
+	req.ID = uuid.New()
+	req.CreatedAt = now
+	req.UpdatedAt = now
+
+	userIDStr, ok := auth.UserIDFrom(r)
+	if !ok {
+		http.Error(w, "unauthenticated", http.StatusUnauthorized)
 		return
 	}
 
-	var due, ps, pe *time.Time
-	parseDate := func(s *string) *time.Time {
-		if s == nil || *s == "" {
-			return nil
-		}
-		// รองรับทั้ง date และ datetime
-		if t, err := time.Parse(time.RFC3339, *s); err == nil {
-			return &t
-		}
-		if d, err := time.Parse("2006-01-02", *s); err == nil {
-			return &d
-		}
-		return nil
-	}
-	due = parseDate(req.DueDate)
-	ps = parseDate(req.PeriodStart)
-	pe = parseDate(req.PeriodEnd)
-
-	b := &Bill{
-		Type:               req.Type,
-		Title:              req.Title,
-		Amount:             req.Amount,
-		BillingPeriodStart: ps,
-		BillingPeriodEnd:   pe,
-		DueDate:            due,
-		Note:               req.Note,
-		CreatedBy:          claims.UserID,
-	}
-	if err := h.Repo.Create(r.Context(), b); err != nil {
-		httpx.WriteJSONError(w, http.StatusInternalServerError, err.Error(), nil)
-		return
-	}
-	httpx.JSON(w, http.StatusCreated, b)
-}
-
-func (h Handler) Pay(w http.ResponseWriter, r *http.Request) {
-	id := chi.URLParam(r, "id")
-	b, err := h.Repo.MarkPaid(r.Context(), id)
+	userUUID, err := uuid.Parse(userIDStr)
 	if err != nil {
-		httpx.WriteJSONError(w, http.StatusBadRequest, err.Error(), nil)
+		http.Error(w, "invalid user ID", http.StatusBadRequest)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, b)
+	req.CreatedBy = userUUID
+
+	if req.Status == "paid" {
+		if req.PaidAt == nil {
+			t := now
+			req.PaidAt = &t
+		}
+	} else {
+		req.PaidAt = nil
+	}
+
+	if err := h.Svc.CreateBill(r.Context(), &req); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	render.JSON(w, r, req)
 }
 
-func (h Handler) List(w http.ResponseWriter, r *http.Request) {
-	bs, err := h.Repo.List(r.Context(), 50)
+func (h Handler) listBills(w http.ResponseWriter, r *http.Request) {
+	list, err := h.Svc.ListBills(r.Context())
 	if err != nil {
-		httpx.WriteJSONError(w, http.StatusInternalServerError, err.Error(), nil)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	httpx.JSON(w, http.StatusOK, bs)
+	render.JSON(w, r, list)
+}
+
+func (h Handler) summary(w http.ResponseWriter, r *http.Request) {
+	res, err := h.Svc.Summarize(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	render.JSON(w, r, res)
 }
