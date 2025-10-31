@@ -79,7 +79,6 @@ Future<void> main() async {
     );
   };
 
-  // dotenv
   try {
     await dotenv.load(fileName: ".env.development");
     debugPrint('✅ dotenv loaded: .env.development');
