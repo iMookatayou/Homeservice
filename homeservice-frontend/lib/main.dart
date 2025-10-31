@@ -111,8 +111,7 @@ Future<void> main() async {
       }
     }
   });
-
-  // Isolate errors
+    
   Isolate.current.addErrorListener(
     RawReceivePort((dynamic pair) {
       final List<dynamic> errorAndStack = pair as List<dynamic>;
