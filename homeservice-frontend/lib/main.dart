@@ -92,7 +92,6 @@ Future<void> main() async {
     }
   }
 
-  // 🚀 runApp อยู่โซนเดียวกับ ensureInitialized ด้านบน
   runApp(
     const ProviderScope(observers: [RiverpodLogger()], child: HomeServiceApp()),
   );
