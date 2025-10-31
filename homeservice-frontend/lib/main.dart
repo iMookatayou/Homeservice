@@ -102,7 +102,6 @@ Future<void> main() async {
   Future.delayed(const Duration(seconds: 3), () {
   });
 
-  // Frame jank logger
   SchedulerBinding.instance.addTimingsCallback((timings) {
     for (final t in timings) {
       final b = t.buildDuration.inMilliseconds;
