@@ -8,11 +8,28 @@ import '../state/weather_provider.dart';
 import '../models/weather.dart';
 
 class AppColors {
+  // Hospital-ish, government-clean
   static const deepNavy = Color(0xFF0F2D5C);
   static const softBlue = Color(0xFF2D5BFF);
   static const mint = Color(0xFF14B8A6);
   static const cardBorder = Color(0xFFE7ECF4);
   static const textMuted = Color(0xFF6B7280);
+}
+
+class _DotBadge extends StatelessWidget {
+  const _DotBadge({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 10,
+      height: 10,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFF3B30),
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 1.5),
+      ),
+    );
+  }
 }
 
 class HomeScreen extends ConsumerWidget {
@@ -25,13 +42,49 @@ class HomeScreen extends ConsumerWidget {
     final weather = ref.watch(currentWeatherProvider);
 
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+
+      // ===== AppBar: ไอคอนบ้าน + ระฆัง + ออกจากระบบ =====
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.white,
         foregroundColor: AppColors.deepNavy,
-        titleSpacing: 16,
-        title: const Text('HomeService'),
+        centerTitle: true,
+        title: Container(
+          height: 40,
+          width: 40,
+          decoration: BoxDecoration(
+            color: AppColors.softBlue.withOpacity(.12),
+            shape: BoxShape.circle,
+            border: Border.all(color: AppColors.cardBorder),
+          ),
+          child: const Icon(
+            Icons.home_rounded,
+            color: AppColors.softBlue,
+            size: 24,
+          ),
+        ),
         actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 4),
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                IconButton(
+                  tooltip: 'Notifications',
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Coming soon: Notifications'),
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.notifications_none_rounded, size: 22),
+                ),
+                const Positioned(right: 6, top: 6, child: _DotBadge()),
+              ],
+            ),
+          ),
           IconButton(
             tooltip: 'Logout',
             onPressed: () async {
@@ -43,7 +96,8 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      backgroundColor: const Color(0xFFF8FAFC),
+
+      // ===== Body: คอนเทนต์เดิมกลับมา =====
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(locationProvider);
@@ -53,19 +107,17 @@ class HomeScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
-            _WelcomeHeader(name: user?.name),
-            const SizedBox(height: 16),
-            _SectionCard(
+            const _SectionCard(
               title: 'Current Weather',
               subtitle: 'Local conditions',
-              trailing: const _AutoSyncChip(),
-              child: _WeatherBody(weather: weather),
+              trailing: _AutoSyncChip(),
+              child: const _WeatherBodyProxy(),
             ),
             const SizedBox(height: 16),
-            _SectionCard(
+            const _SectionCard(
               title: 'Tools',
               subtitle: 'Manage your home quickly',
-              child: const _QuickToolsSection(),
+              child: _QuickToolsSection(),
             ),
             const SizedBox(height: 16),
           ],
@@ -276,6 +328,17 @@ class _PillChip extends StatelessWidget {
   }
 }
 
+/// proxy เพื่อดึง AsyncValue<WeatherNow> จาก provider
+class _WeatherBodyProxy extends ConsumerWidget {
+  const _WeatherBodyProxy();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final weather = ref.watch(currentWeatherProvider);
+    return _WeatherBody(weather: weather);
+  }
+}
+
 class _WeatherBody extends StatelessWidget {
   const _WeatherBody({required this.weather});
   final AsyncValue<WeatherNow> weather;
@@ -483,10 +546,7 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-// ===================================================================
-// =====================  Quick Tools (TH captions)  ==================
-// ===================================================================
-
+// =====================  Quick Tools  =====================
 class _QuickToolsSection extends StatelessWidget {
   const _QuickToolsSection();
 
@@ -497,7 +557,7 @@ class _QuickToolsSection extends StatelessWidget {
         Icons.handyman,
         'Contractors',
         '/contractors',
-        'เรียกช่างถึงบ้าน',
+        'รายชื่อช่างตามตำแหน่ง',
       ),
       const _ToolItem(
         Icons.event_note,
@@ -527,7 +587,7 @@ class _QuickToolsSection extends StatelessWidget {
       const _ToolItem(
         Icons.medical_services_outlined,
         'Medicine Stock',
-        '/meds',
+        '/medicine',
         'เช็คสต็อกยาประจำบ้าน',
       ),
       const _ToolItem(

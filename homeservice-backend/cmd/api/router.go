@@ -9,11 +9,12 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 
 	"github.com/iMookatayou/homeservice-backend/internal/purchases"
+	"github.com/iMookatayou/homeservice-backend/internal/stocks"
 )
 
-// Deps: รวม dependencies ที่ layer HTTP ต้องใช้
 type Deps struct {
 	PurchasesSvc *purchases.Service
+	StocksSvc    *stocks.Service
 }
 
 func NewRouter(deps Deps) http.Handler {
@@ -38,6 +39,8 @@ func NewRouter(deps Deps) http.Handler {
 		purchases.Registrar{
 			H: purchases.Handler{Svc: deps.PurchasesSvc},
 		}.Register(r)
+
+		stocks.RegisterRoutes(r, &stocks.Handler{SVC: deps.StocksSvc})
 	})
 
 	// DEBUG: พิมพ์ route ทั้งหมด (ช่วยไล่ 404)

@@ -9,6 +9,11 @@ import '../models/note.dart';
 import '../state/notes_provider.dart';
 import '../repositories/notes_repository.dart';
 
+// ✅ ใช้ Header แบบเดียวกับหน้าอื่น
+import '../widgets/top_nav_bar.dart';
+import '../widgets/search_bar_field.dart';
+import '../widgets/header_row.dart';
+
 class NotesScreen extends ConsumerStatefulWidget {
   const NotesScreen({super.key});
   @override
@@ -53,6 +58,21 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
       ),
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F9FC),
+        appBar: TopNavBar(
+          title: 'Important Notes',
+          actions: [
+            IconButton(
+              tooltip: 'Refresh',
+              onPressed: () => ref.refresh(notesProvider(_QUERY)),
+              icon: const Icon(Icons.refresh),
+            ),
+            IconButton(
+              tooltip: 'Clear filters',
+              onPressed: _clearAll,
+              icon: const Icon(Icons.filter_alt_off),
+            ),
+          ],
+        ),
         floatingActionButton: FloatingActionButton.extended(
           backgroundColor: accent,
           foregroundColor: Colors.white,
@@ -60,46 +80,29 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
           icon: const Icon(Icons.add),
           label: const Text('New Note'),
         ),
-        body: NestedScrollView(
-          controller: _scroll,
-          headerSliverBuilder: (_, __) => [
-            SliverAppBar(
-              pinned: true,
-              title: const Text(
-                'Important Notes',
-                style: TextStyle(fontWeight: FontWeight.w800),
+        body: Column(
+          children: [
+            // ✅ Header เดียวกับหน้าอื่น: Search ทางซ้าย + ปุ่ม Filters ทางขวา
+            HeaderRow(
+              left: _SearchField(
+                controller: _q,
+                onChanged: (_) => setState(() {}),
+                onClear: () => setState(() {}),
               ),
-              actions: [
-                IconButton(
-                  tooltip: 'Refresh',
-                  onPressed: () => ref.refresh(notesProvider(_QUERY)),
-                  icon: const Icon(Icons.refresh),
-                ),
-                IconButton(
-                  tooltip: 'Clear filters',
-                  onPressed: _clearAll,
-                  icon: const Icon(Icons.filter_alt_off),
-                ),
-              ],
-              bottom: PreferredSize(
-                preferredSize: const Size.fromHeight(56),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  child: _SearchField(
-                    controller: _q,
-                    onChanged: (_) => setState(() {}),
-                    onClear: () => setState(() {}),
-                  ),
-                ),
+              right: _FilterButton(
+                isOpen: _filtersOpen,
+                activeCount: _activeFilterCount(),
+                onTap: () => setState(() => _filtersOpen = !_filtersOpen),
               ),
             ),
 
-            // แผงตัวกรองเดี่ยว (หัวเดียว กดแล้วกางทั้งหมด)
-            SliverToBoxAdapter(
-              child: Padding(
+            // ✅ แผง Filters (กาง/หุบ) — เนื้อหาเหมือนเดิม
+            AnimatedCrossFade(
+              duration: const Duration(milliseconds: 160),
+              crossFadeState: _filtersOpen
+                  ? CrossFadeState.showFirst
+                  : CrossFadeState.showSecond,
+              firstChild: Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
                   vertical: 6,
@@ -113,173 +116,109 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                   child: Padding(
                     padding: const EdgeInsets.all(10),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        InkWell(
-                          borderRadius: BorderRadius.circular(8),
-                          onTap: () =>
-                              setState(() => _filtersOpen = !_filtersOpen),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.tune, size: 20),
-                              const SizedBox(width: 8),
-                              Text(
-                                'Filters',
-                                style: Theme.of(context).textTheme.titleMedium
-                                    ?.copyWith(fontWeight: FontWeight.w700),
+                        _SectionLabel('Status'),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 6,
+                          children: [
+                            _statusChip('All', _StatusTab.all),
+                            _statusChip('Active', _StatusTab.active),
+                            _statusChip('Done', _StatusTab.done),
+                            _statusChip('Overdue', _StatusTab.overdue),
+                            _statusChip('Pinned', _StatusTab.pinned),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                        _SectionLabel('Category'),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 6,
+                          children: [
+                            _categoryChip('All', null),
+                            _categoryChip('Bills', 'bills'),
+                            _categoryChip('Chores', 'chores'),
+                            _categoryChip('Appointment', 'appointment'),
+                            _categoryChip('General', 'general'),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                        _SectionLabel('Pinned'),
+                        const SizedBox(height: 6),
+                        Wrap(
+                          spacing: 6,
+                          children: [
+                            _pinnedChip('All', null),
+                            _pinnedChip('Pinned', true),
+                            _pinnedChip('Unpinned', false),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+
+                        _SectionLabel('Tag'),
+                        const SizedBox(height: 6),
+                        notes.maybeWhen(
+                          data: (items) {
+                            final set = <String>{};
+                            for (final n in items) set.addAll(n.tags);
+                            final list = set.toList()..sort();
+                            return SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  _tagChip('All', 'all'),
+                                  const SizedBox(width: 6),
+                                  for (final t in list) ...[
+                                    _tagChip('#$t', t),
+                                    const SizedBox(width: 6),
+                                  ],
+                                ],
                               ),
-                              const SizedBox(width: 6),
-                              if (_activeFilterCount() > 0)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEFF6FF),
-                                    borderRadius: BorderRadius.circular(999),
-                                  ),
-                                  child: Text(
-                                    '${_activeFilterCount()} active',
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      color: Color(0xFF2563EB),
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              const Spacer(),
-                              Icon(
-                                _filtersOpen
-                                    ? Icons.expand_less
-                                    : Icons.expand_more,
-                              ),
-                            ],
-                          ),
+                            );
+                          },
+                          orElse: () => const SizedBox.shrink(),
                         ),
 
-                        // เนื้อหาฟิลเตอร์ทั้งหมด (กาง/หุบ)
-                        AnimatedCrossFade(
-                          duration: const Duration(milliseconds: 160),
-                          crossFadeState: _filtersOpen
-                              ? CrossFadeState.showFirst
-                              : CrossFadeState.showSecond,
-                          firstChild: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const SizedBox(height: 10),
-
-                              // Status
-                              _SectionLabel('Status'),
-                              const SizedBox(height: 6),
-                              Wrap(
-                                spacing: 6,
-                                children: [
-                                  _statusChip('All', _StatusTab.all),
-                                  _statusChip('Active', _StatusTab.active),
-                                  _statusChip('Done', _StatusTab.done),
-                                  _statusChip('Overdue', _StatusTab.overdue),
-                                  _statusChip('Pinned', _StatusTab.pinned),
-                                ],
+                        const SizedBox(height: 12),
+                        Row(
+                          children: {
+                            TextButton.icon(
+                              onPressed: _clearAll,
+                              icon: const Icon(Icons.clear_all, size: 18),
+                              label: const Text('Clear'),
+                            ),
+                            const Spacer(),
+                            FilledButton.icon(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: accent,
                               ),
-
-                              const SizedBox(height: 10),
-
-                              // Category
-                              _SectionLabel('Category'),
-                              const SizedBox(height: 6),
-                              Wrap(
-                                spacing: 6,
-                                children: [
-                                  _categoryChip('All', null),
-                                  _categoryChip('Bills', 'bills'),
-                                  _categoryChip('Chores', 'chores'),
-                                  _categoryChip('Appointment', 'appointment'),
-                                  _categoryChip('General', 'general'),
-                                ],
-                              ),
-
-                              const SizedBox(height: 10),
-
-                              // Pinned
-                              _SectionLabel('Pinned'),
-                              const SizedBox(height: 6),
-                              Wrap(
-                                spacing: 6,
-                                children: [
-                                  _pinnedChip('All', null),
-                                  _pinnedChip('Pinned', true),
-                                  _pinnedChip('Unpinned', false),
-                                ],
-                              ),
-
-                              const SizedBox(height: 10),
-
-                              // Tag (โหลดจากข้อมูล)
-                              _SectionLabel('Tag'),
-                              const SizedBox(height: 6),
-                              notes.maybeWhen(
-                                data: (items) {
-                                  final set = <String>{};
-                                  for (final n in items) set.addAll(n.tags);
-                                  final list = set.toList()..sort();
-                                  return SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: Row(
-                                      children: [
-                                        _tagChip('All', 'all'),
-                                        const SizedBox(width: 6),
-                                        for (final t in list) ...[
-                                          _tagChip('#$t', t),
-                                          const SizedBox(width: 6),
-                                        ],
-                                      ],
-                                    ),
-                                  );
-                                },
-                                orElse: () => const SizedBox.shrink(),
-                              ),
-
-                              const SizedBox(height: 12),
-                              Row(
-                                children: [
-                                  TextButton.icon(
-                                    onPressed: _clearAll,
-                                    icon: const Icon(Icons.clear_all, size: 18),
-                                    label: const Text('Clear'),
-                                  ),
-                                  const Spacer(),
-                                  FilledButton.icon(
-                                    style: FilledButton.styleFrom(
-                                      backgroundColor: accent,
-                                    ),
-                                    onPressed: () {
-                                      // แค่ปิดแผง แล้วเลื่อนไปบนสุด
-                                      setState(() => _filtersOpen = false);
-                                      _scroll.animateTo(
-                                        0,
-                                        duration: const Duration(
-                                          milliseconds: 160,
-                                        ),
-                                        curve: Curves.easeOut,
-                                      );
-                                    },
-                                    icon: const Icon(Icons.check),
-                                    label: const Text('Apply'),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          secondChild: const SizedBox.shrink(),
+                              onPressed: () {
+                                setState(() => _filtersOpen = false);
+                                _scroll.animateTo(
+                                  0,
+                                  duration: const Duration(milliseconds: 160),
+                                  curve: Curves.easeOut,
+                                );
+                              },
+                              icon: const Icon(Icons.check),
+                              label: const Text('Apply'),
+                            ),
+                          }.toList(),
                         ),
                       ],
                     ),
                   ),
                 ),
               ),
+              secondChild: const SizedBox.shrink(),
             ),
+
+            // ✅ เนื้อหาหลัก (List/Refresh) — เหมือนเดิม
+            Expanded(child: _buildBody(notes, accent)),
           ],
-          body: _buildBody(notes, accent),
         ),
       ),
     );
@@ -363,6 +302,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
               await ref.refresh(notesProvider(_QUERY).future);
             },
             child: ListView.separated(
+              controller: _scroll,
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 96),
               itemCount: byStatus.length,
               separatorBuilder: (_, __) => const SizedBox(height: 8),
@@ -671,6 +611,53 @@ class _SearchFieldState extends State<_SearchField> {
   }
 }
 
+// ปุ่ม Filters ทางขวาใน HeaderRow (แจ้งจำนวน Active + toggle เปิด/ปิด)
+class _FilterButton extends StatelessWidget {
+  const _FilterButton({
+    required this.isOpen,
+    required this.activeCount,
+    required this.onTap,
+  });
+  final bool isOpen;
+  final int activeCount;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasActive = activeCount > 0;
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: const Icon(Icons.tune, size: 18),
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Filters'),
+          if (hasActive) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '$activeCount',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF2563EB),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(width: 2),
+          Icon(isOpen ? Icons.expand_less : Icons.expand_more, size: 18),
+        ],
+      ),
+    );
+  }
+}
+
 class _NoteCard extends StatefulWidget {
   const _NoteCard({
     required this.note,
@@ -774,10 +761,10 @@ class _NoteCardState extends State<_NoteCard> with TickerProviderStateMixin {
                 runSpacing: 6,
                 children: [
                   statusPill,
-                  _Pill(
-                    text: cat,
-                    color: const Color(0xFFF3F4F6),
-                    textColor: const Color(0xFF374151),
+                  const _Pill(
+                    text: 'general',
+                    color: Color(0xFFF3F4F6),
+                    textColor: Color(0xFF374151),
                   ),
                   if (n.tags.isNotEmpty)
                     _Pill(
@@ -933,7 +920,7 @@ class _EditResult {
   final bool pinned;
 }
 
-/* ===== Editor bottom sheet ===== */
+/* ===== Editor bottom sheet (เดิม) ===== */
 
 class _EditorSheet extends StatefulWidget {
   const _EditorSheet({this.note, required this.accent});

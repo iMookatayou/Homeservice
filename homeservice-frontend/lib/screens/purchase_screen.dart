@@ -8,6 +8,11 @@ import '../state/purchase_providers.dart';
 import '../models/purchase_model.dart';
 import '../services/purchase_api.dart';
 
+// ✅ ใช้หัวแบบเดียวกับ Bills/Notes
+import '../widgets/top_nav_bar.dart';
+import '../widgets/search_bar_field.dart';
+import '../widgets/header_row.dart';
+
 enum _StatusFilter { all, planned, ordered, bought, delivered, canceled }
 
 class PurchaseScreen extends ConsumerStatefulWidget {
@@ -19,7 +24,7 @@ class PurchaseScreen extends ConsumerStatefulWidget {
 class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   final _search = TextEditingController();
 
-  // แผงฟิลเตอร์แบบ Important Notes
+  // แผงฟิลเตอร์ (pattern เดียวกับ Notes)
   bool _filtersOpen = false;
   _StatusFilter _status = _StatusFilter.all;
 
@@ -47,21 +52,25 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   @override
   Widget build(BuildContext context) {
     final listAsync = ref.watch(purchasesListProvider);
-    const accent = Color(0xFF1F4E9E); // โทนน้ำเงินเดียวกับ Important Notes
+    const accent = Color(0xFF1F4E9E); // same tone as Notes
 
     return Theme(
       data: Theme.of(context).copyWith(
         colorScheme: Theme.of(context).colorScheme.copyWith(primary: accent),
-        appBarTheme: const AppBarTheme(
-          elevation: 0,
-          backgroundColor: Colors.white,
-          foregroundColor: Colors.black,
-          centerTitle: false,
-        ),
         visualDensity: VisualDensity.compact,
       ),
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F9FC),
+        appBar: TopNavBar(
+          title: 'Purchases',
+          actions: [
+            IconButton(
+              tooltip: 'Clear filters',
+              onPressed: _clearAll,
+              icon: const Icon(Icons.filter_alt_off),
+            ),
+          ],
+        ),
         floatingActionButton: FloatingActionButton.extended(
           backgroundColor: accent,
           foregroundColor: Colors.white,
@@ -69,33 +78,34 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
           icon: const Icon(Icons.add),
           label: const Text('New Purchase'),
         ),
-        appBar: AppBar(
-          titleSpacing: 0,
-          title: _SearchField(
-            controller: _search,
-            hint: 'ค้นหา (ชื่อ, ร้าน, หมวด, โน้ต, สถานะ)',
-            onChanged: (_) => setState(() {}),
-            onClear: () => setState(_search.clear),
-          ),
-          actions: [
-            IconButton(
-              tooltip: 'ล้างตัวกรองทั้งหมด',
-              onPressed: _clearAll,
-              icon: const Icon(Icons.filter_alt_off),
-            ),
-          ],
-        ),
         body: listAsync.when(
           loading: () =>
               const Center(child: CircularProgressIndicator.adaptive()),
           error: (e, _) => _ErrorOrAuth(e: e),
-          data: (items) => RefreshIndicator(
-            onRefresh: () async => ref.refresh(purchasesListProvider.future),
-            child: ListView(
-              children: [
-                // ===== Filters panel (เหมือน Important Notes) =====
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+          data: (items) => Column(
+            children: [
+              HeaderRow(
+                left: SearchBarField(
+                  controller: _search,
+                  onChanged: (_) => setState(() {}),
+                  onClear: () => setState(_search.clear),
+                  hintText:
+                      'Search (title/store/category/note/status) • ค้นหา…',
+                ),
+                right: _FilterButton(
+                  isOpen: _filtersOpen,
+                  activeCount: _activeFilterCount(),
+                  onTap: () => setState(() => _filtersOpen = !_filtersOpen),
+                ),
+              ),
+
+              AnimatedCrossFade(
+                duration: const Duration(milliseconds: 160),
+                crossFadeState: _filtersOpen
+                    ? CrossFadeState.showFirst
+                    : CrossFadeState.showSecond,
+                firstChild: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 6, 12, 4),
                   child: Card(
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -105,128 +115,81 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                     child: Padding(
                       padding: const EdgeInsets.all(10),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          InkWell(
-                            borderRadius: BorderRadius.circular(8),
-                            onTap: () =>
-                                setState(() => _filtersOpen = !_filtersOpen),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.tune, size: 20),
-                                const SizedBox(width: 8),
-                                Text(
-                                  'Filters',
-                                  style: Theme.of(context).textTheme.titleMedium
-                                      ?.copyWith(fontWeight: FontWeight.w700),
-                                ),
-                                const SizedBox(width: 6),
-                                if (_activeFilterCount() > 0)
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFEFF6FF),
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                    child: Text(
-                                      '${_activeFilterCount()} active',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Color(0xFF2563EB),
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ),
-                                const Spacer(),
-                                Icon(
-                                  _filtersOpen
-                                      ? Icons.expand_less
-                                      : Icons.expand_more,
-                                ),
-                              ],
-                            ),
+                          _SectionLabel('Status • สถานะ'),
+                          const SizedBox(height: 6),
+                          Wrap(
+                            spacing: 6,
+                            children: [
+                              _statusChip('All • ทั้งหมด', _StatusFilter.all),
+                              _statusChip(
+                                'Planned • วางแผน',
+                                _StatusFilter.planned,
+                              ),
+                              _statusChip(
+                                'Ordered • สั่งแล้ว',
+                                _StatusFilter.ordered,
+                              ),
+                              _statusChip(
+                                'Bought • ซื้อแล้ว',
+                                _StatusFilter.bought,
+                              ),
+                              _statusChip(
+                                'Delivered • ส่งมอบ',
+                                _StatusFilter.delivered,
+                              ),
+                              _statusChip(
+                                'Canceled • ยกเลิก',
+                                _StatusFilter.canceled,
+                              ),
+                            ],
                           ),
-                          AnimatedCrossFade(
-                            duration: const Duration(milliseconds: 160),
-                            crossFadeState: _filtersOpen
-                                ? CrossFadeState.showFirst
-                                : CrossFadeState.showSecond,
-                            firstChild: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 10),
-                                _SectionLabel('สถานะ'),
-                                const SizedBox(height: 6),
-                                Wrap(
-                                  spacing: 6,
-                                  children: [
-                                    _statusChip('ทั้งหมด', _StatusFilter.all),
-                                    _statusChip(
-                                      'วางแผน',
-                                      _StatusFilter.planned,
-                                    ),
-                                    _statusChip(
-                                      'สั่งแล้ว',
-                                      _StatusFilter.ordered,
-                                    ),
-                                    _statusChip(
-                                      'ซื้อแล้ว',
-                                      _StatusFilter.bought,
-                                    ),
-                                    _statusChip(
-                                      'ส่งมอบ',
-                                      _StatusFilter.delivered,
-                                    ),
-                                    _statusChip(
-                                      'ยกเลิก',
-                                      _StatusFilter.canceled,
-                                    ),
-                                  ],
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              TextButton.icon(
+                                onPressed: _clearAll,
+                                icon: const Icon(Icons.clear_all, size: 18),
+                                label: const Text('Clear • ล้างทั้งหมด'),
+                              ),
+                              const Spacer(),
+                              FilledButton.icon(
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: accent,
                                 ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  children: [
-                                    TextButton.icon(
-                                      onPressed: _clearAll,
-                                      icon: const Icon(
-                                        Icons.clear_all,
-                                        size: 18,
-                                      ),
-                                      label: const Text('ล้างทั้งหมด'),
-                                    ),
-                                    const Spacer(),
-                                    FilledButton.icon(
-                                      style: FilledButton.styleFrom(
-                                        backgroundColor: accent,
-                                      ),
-                                      onPressed: () =>
-                                          setState(() => _filtersOpen = false),
-                                      icon: const Icon(Icons.check),
-                                      label: const Text('ใช้ตัวกรอง'),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            secondChild: const SizedBox.shrink(),
+                                onPressed: () =>
+                                    setState(() => _filtersOpen = false),
+                                icon: const Icon(Icons.check),
+                                label: const Text('Apply • ใช้งาน'),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
                   ),
                 ),
+                secondChild: const SizedBox.shrink(),
+              ),
 
-                // ===== List =====
-                _ListBody(
-                  items: items,
-                  q: _search.text,
-                  status: _status,
-                  onClearFilters: _clearAll,
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: () async =>
+                      ref.refresh(purchasesListProvider.future),
+                  child: ListView(
+                    children: [
+                      _ListBody(
+                        items: items,
+                        q: _search.text,
+                        status: _status,
+                        onClearFilters: _clearAll,
+                      ),
+                    ],
+                  ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -240,47 +203,49 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
   );
 }
 
-/* ===================== Search (เหมือน Important Notes) ===================== */
+/* ===================== Filter Button (เหมือน Notes) ===================== */
 
-class _SearchField extends StatelessWidget {
-  final TextEditingController controller;
-  final String hint;
-  final ValueChanged<String> onChanged;
-  final VoidCallback onClear;
-  const _SearchField({
-    required this.controller,
-    required this.hint,
-    required this.onChanged,
-    required this.onClear,
+class _FilterButton extends StatelessWidget {
+  const _FilterButton({
+    required this.isOpen,
+    required this.activeCount,
+    required this.onTap,
   });
+  final bool isOpen;
+  final int activeCount;
+  final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: TextField(
-        controller: controller,
-        onChanged: onChanged,
-        textInputAction: TextInputAction.search,
-        decoration: InputDecoration(
-          hintText: hint,
-          prefixIcon: const Icon(Icons.search),
-          suffixIcon: controller.text.isEmpty
-              ? null
-              : IconButton(icon: const Icon(Icons.close), onPressed: onClear),
-          isDense: true,
-          filled: true,
-          fillColor: const Color(0xFFF3F4F6),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: cs.outlineVariant),
-          ),
-          contentPadding: const EdgeInsets.symmetric(
-            vertical: 10,
-            horizontal: 12,
-          ),
-        ),
+    final hasActive = activeCount > 0;
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: const Icon(Icons.tune, size: 18),
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Filters • ตัวกรอง'),
+          if (hasActive) ...[
+            const SizedBox(width: 6),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                '$activeCount',
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: Color(0xFF2563EB),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(width: 2),
+          Icon(isOpen ? Icons.expand_less : Icons.expand_more, size: 18),
+        ],
       ),
     );
   }
@@ -395,16 +360,16 @@ class _PurchaseCard extends StatelessWidget {
   String _statusLabel() {
     switch (p.status) {
       case PurchaseStatus.planned:
-        return 'วางแผน';
+        return 'Planned • วางแผน';
       case PurchaseStatus.ordered:
-        return 'สั่งแล้ว';
+        return 'Ordered • สั่งแล้ว';
       case PurchaseStatus.bought:
-        return 'ซื้อแล้ว';
+        return 'Bought • ซื้อแล้ว';
       case PurchaseStatus.delivered:
-        return 'ส่งมอบแล้ว';
+        return 'Delivered • ส่งมอบแล้ว';
       case PurchaseStatus.canceled:
       case PurchaseStatus.cancelled:
-        return 'ยกเลิก';
+        return 'Canceled • ยกเลิก';
     }
   }
 
@@ -560,13 +525,13 @@ class _ErrorOrAuth extends StatelessWidget {
             const Icon(Icons.lock_outline, size: 48, color: Colors.grey),
             const SizedBox(height: 12),
             const Text(
-              'กรุณาเข้าสู่ระบบก่อนใช้งาน',
+              'Please sign in • กรุณาเข้าสู่ระบบก่อนใช้งาน',
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
             const SizedBox(height: 8),
             FilledButton.icon(
               icon: const Icon(Icons.login),
-              label: const Text('เข้าสู่ระบบ'),
+              label: const Text('Sign in • เข้าสู่ระบบ'),
               onPressed: () => context.push('/login'),
             ),
           ],
@@ -579,7 +544,7 @@ class _ErrorOrAuth extends StatelessWidget {
         children: [
           const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
           const SizedBox(height: 8),
-          const Text('ไม่สามารถโหลดข้อมูลได้'),
+          const Text('Failed to load • ไม่สามารถโหลดข้อมูลได้'),
           const SizedBox(height: 4),
           Text(
             e.toString(),
@@ -600,8 +565,8 @@ class _EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final text = hasQueryOrFilter
-        ? 'ไม่พบรายการตามเงื่อนไข'
-        : 'ยังไม่มีรายการสั่งซื้อ';
+        ? 'No results • ไม่พบรายการตามเงื่อนไข'
+        : 'No purchases yet • ยังไม่มีรายการสั่งซื้อ';
     return Padding(
       padding: const EdgeInsets.only(top: 32),
       child: Center(
@@ -623,12 +588,12 @@ class _EmptyState extends StatelessWidget {
                   OutlinedButton.icon(
                     onPressed: onClearFilters,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('ล้างตัวกรอง'),
+                    label: const Text('Clear filters • ล้างตัวกรอง'),
                   ),
                 FilledButton.icon(
                   onPressed: () => context.push('/purchases/new'),
                   icon: const Icon(Icons.add),
-                  label: const Text('เพิ่มรายการ'),
+                  label: const Text('New • เพิ่มรายการ'),
                 ),
               ],
             ),

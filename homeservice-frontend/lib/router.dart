@@ -23,8 +23,18 @@ import 'screens/bills_screen.dart';
 import 'screens/bill_form_screen.dart';
 import 'screens/bills_summary_screen.dart';
 import 'screens/bill_detail_screen.dart';
-
 import 'models/bill.dart';
+
+// Medicine
+import 'screens/medicine_screen.dart';
+import 'screens/medicine_form_screen.dart';
+import 'screens/medicine_detail_screen.dart';
+
+// Media
+import 'screens/stock_media_screen.dart';
+import 'screens/stock_detail_screen.dart';
+import 'screens/stock_media_screen.dart';
+import 'screens/stocks_watchlist_screen.dart';
 
 class GoRouterRefreshNotifier extends ChangeNotifier {
   GoRouterRefreshNotifier(this.ref) {
@@ -73,19 +83,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/purchases',
         builder: (_, __) => const PurchaseScreen(),
         routes: [
-          // /purchases/new  -> create
           GoRoute(
             path: 'new',
             builder: (_, __) =>
                 const PurchaseFormScreen(mode: PurchaseFormMode.create),
           ),
-          // /purchases/:id  -> detail
           GoRoute(
             path: ':id',
             builder: (_, st) =>
                 PurchaseDetailScreen(id: st.pathParameters['id']!),
             routes: [
-              // /purchases/:id/edit -> edit
               GoRoute(
                 path: 'edit',
                 builder: (_, st) => PurchaseFormScreen(
@@ -98,7 +105,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
-      /// ==== Bills module ====
+      // ===== Bills module =====
       GoRoute(
         path: '/bills',
         builder: (_, __) => const BillsScreen(),
@@ -114,6 +121,39 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
+
+      // ===== Medicine module =====
+      GoRoute(
+        path: '/medicine',
+        builder: (_, __) => const MedicineScreen(),
+        routes: [
+          GoRoute(path: 'new', builder: (_, __) => const MedicineFormScreen()),
+          GoRoute(
+            path: ':id',
+            builder: (_, st) =>
+                MedicineDetailScreen(id: st.pathParameters['id']!),
+          ),
+        ],
+      ),
+      // ===== Stocks module =====
+      GoRoute(
+        path: '/stocks',
+        builder: (_, __) => const StocksWatchlistScreen(),
+        routes: [
+          GoRoute(
+            path: ':watchId',
+            builder: (_, st) =>
+                StockDetailScreen(watchId: st.pathParameters['watchId']!),
+            routes: [
+              GoRoute(
+                path: 'media',
+                builder: (_, st) =>
+                    StockMediaScreen(watchId: st.pathParameters['watchId']!),
+              ),
+            ],
+          ),
+        ],
+      ),
     ],
 
     errorBuilder: (ctx, s) =>
@@ -124,8 +164,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       final auth = ref.read(authProvider);
 
       debugPrint(
-        '[router] redirect check path=$path '
-        'loading=${auth.loading} authed=${auth.isAuthenticated}',
+        '[router] redirect check path=$path loading=${auth.loading} authed=${auth.isAuthenticated}',
       );
 
       if (auth.loading) return null;

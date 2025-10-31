@@ -6,6 +6,9 @@ import 'package:go_router/go_router.dart';
 
 import '../models/bill.dart';
 import '../state/bills_provider.dart';
+import '../widgets/top_nav_bar.dart';
+import '../widgets/search_bar_field.dart';
+import '../widgets/header_row.dart';
 
 class BillsScreen extends ConsumerStatefulWidget {
   const BillsScreen({super.key});
@@ -39,7 +42,7 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // sync controller when provider changes (จากที่คุณใช้ใน BillsListScreen)
+    // sync controller เมื่อ provider เปลี่ยน
     ref.listen<String>(billsQueryProvider, (_, next) {
       if (_q.text != next) _q.text = next;
     });
@@ -47,23 +50,17 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
     final itemsAsync = ref.watch(billsProvider);
     final filter = ref.watch(billsStatusFilterProvider);
 
-    const accent = Color(0xFF1D4ED8); // สีกรมปุ่ม New ตามตัวอย่าง
+    const accent = Color(0xFF1F4E9E);
 
     return Theme(
       data: Theme.of(context).copyWith(
         colorScheme: Theme.of(context).colorScheme.copyWith(primary: accent),
-        appBarTheme: const AppBarTheme(
-          elevation: 0,
-          centerTitle: false,
-          scrolledUnderElevation: 0,
-        ),
         visualDensity: VisualDensity.compact,
       ),
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F9FC),
-        appBar: AppBar(
-          titleSpacing: 0,
-          title: const Text('Bills'),
+        appBar: TopNavBar(
+          title: 'Bills',
           actions: [
             IconButton(
               tooltip: 'Summary',
@@ -75,7 +72,6 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
               onPressed: () => ref.invalidate(billsProvider),
               icon: const Icon(Icons.refresh),
             ),
-            const SizedBox(width: 4),
           ],
         ),
         floatingActionButton: FloatingActionButton.extended(
@@ -87,91 +83,55 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
         ),
         body: Column(
           children: [
-            // Search + Filter (header แบบ Important Notes)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 6),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _q,
-                      onChanged: _onQueryChanged,
-                      onSubmitted: (_) => FocusScope.of(context).unfocus(),
-                      textInputAction: TextInputAction.search,
-                      decoration: InputDecoration(
-                        hintText: 'ค้นหาบิล (หัวข้อ/หมายเหตุ/ประเภท)…',
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: (_q.text.isEmpty)
-                            ? null
-                            : IconButton(
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  _q.clear();
-                                  ref.read(billsQueryProvider.notifier).clear();
-                                },
-                              ),
-                        isDense: true,
-                        filled: true,
-                        fillColor: const Color(0xFFF3F4F6),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.outlineVariant,
-                          ),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 10,
-                          horizontal: 12,
-                        ),
-                      ),
+            // Header แบบประกอบ: Search ทางซ้าย + Dropdown ทางขวา (เฉพาะ Bills)
+            HeaderRow(
+              left: SearchBarField(
+                controller: _q,
+                onChanged: _onQueryChanged,
+                onClear: () {
+                  _q.clear();
+                  ref.read(billsQueryProvider.notifier).clear();
+                },
+                hintText: 'ค้นหาบิล (หัวข้อ/หมายเหตุ/ประเภท)…',
+              ),
+              right: DropdownButtonHideUnderline(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outlineVariant,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  DropdownButtonHideUnderline(
-                    child: DecoratedBox(
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: Theme.of(context).colorScheme.outlineVariant,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: DropdownButton<BillsStatusFilter>(
+                      value: filter,
+                      onChanged: (v) {
+                        if (v != null) {
+                          ref.read(billsStatusFilterProvider.notifier).set(v);
+                        }
+                      },
+                      items: const [
+                        DropdownMenuItem(
+                          value: BillsStatusFilter.all,
+                          child: Text('All'),
                         ),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
-                        child: DropdownButton<BillsStatusFilter>(
-                          value: filter,
-                          onChanged: (v) {
-                            if (v != null) {
-                              ref
-                                  .read(billsStatusFilterProvider.notifier)
-                                  .set(v);
-                            }
-                          },
-                          items: const [
-                            DropdownMenuItem(
-                              value: BillsStatusFilter.all,
-                              child: Text('All'),
-                            ),
-                            DropdownMenuItem(
-                              value: BillsStatusFilter.unpaid,
-                              child: Text('Unpaid'),
-                            ),
-                            DropdownMenuItem(
-                              value: BillsStatusFilter.paid,
-                              child: Text('Paid'),
-                            ),
-                          ],
+                        DropdownMenuItem(
+                          value: BillsStatusFilter.unpaid,
+                          child: Text('Unpaid'),
                         ),
-                      ),
+                        DropdownMenuItem(
+                          value: BillsStatusFilter.paid,
+                          child: Text('Paid'),
+                        ),
+                      ],
                     ),
                   ),
-                ],
+                ),
               ),
             ),
-
             const SizedBox(height: 4),
-
-            // List
             Expanded(
               child: itemsAsync.when(
                 loading: () =>
@@ -349,7 +309,6 @@ class _BillCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // title + amount + chevron
               Row(
                 children: [
                   Expanded(
@@ -375,8 +334,6 @@ class _BillCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 6),
-
-              // chips row
               Wrap(
                 spacing: 6,
                 runSpacing: 4,
@@ -430,7 +387,6 @@ class _BillCard extends StatelessWidget {
                   ),
                 ],
               ),
-
               if ((bill.note ?? '').trim().isNotEmpty) ...[
                 const SizedBox(height: 6),
                 Text(
