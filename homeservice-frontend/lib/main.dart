@@ -13,7 +13,6 @@ import 'package:riverpod/riverpod.dart'
 import 'router.dart';
 import 'state/auth_state.dart';
 
-/// ==== Riverpod Observer: log provider updates & errors ====
 final class RiverpodLogger extends ProviderObserver {
   const RiverpodLogger();
 
