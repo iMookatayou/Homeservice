@@ -100,7 +100,6 @@ Future<void> main() async {
     debugPrint('[boot] first frame rendered');
   });
   Future.delayed(const Duration(seconds: 3), () {
-    // ถ้าอยากเช็คเพิ่มว่ายังไม่มีเฟรม ให้ตั้ง flag เองได้
   });
 
   // Frame jank logger
