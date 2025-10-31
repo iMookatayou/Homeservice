@@ -96,8 +96,6 @@ Future<void> main() async {
     const ProviderScope(observers: [RiverpodLogger()], child: HomeServiceApp()),
   );
 
-  // ---- (หลัง runApp) probes ช่วยไล่จอดำ/เฟรมช้า ----
-  // First-frame watchdog
   WidgetsBinding.instance.addPostFrameCallback((_) {
     debugPrint('[boot] first frame rendered');
   });
