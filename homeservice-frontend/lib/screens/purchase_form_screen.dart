@@ -52,7 +52,7 @@ class _PurchaseFormScreenState extends ConsumerState<PurchaseFormScreen> {
   }
 
   String? _validateAmount(String? v) {
-    if (v == null || v.trim().isEmpty) return null; // ไม่บังคับ
+    if (v == null || v.trim().isEmpty) return null; 
     final parsed = double.tryParse(v.trim());
     if (parsed == null) return 'ตัวเลขไม่ถูกต้อง';
     if (parsed < 0) return 'ต้องมากกว่า 0';
