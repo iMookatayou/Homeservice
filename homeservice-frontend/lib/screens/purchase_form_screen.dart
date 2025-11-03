@@ -60,7 +60,6 @@ class _PurchaseFormScreenState extends ConsumerState<PurchaseFormScreen> {
   }
 
   Future<void> _handleSubmit() async {
-    // ปิดคีย์บอร์ดก่อน
     FocusScope.of(context).unfocus();
 
     if (!(_formKey.currentState?.validate() ?? false)) {
