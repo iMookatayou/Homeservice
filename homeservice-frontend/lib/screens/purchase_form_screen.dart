@@ -243,7 +243,6 @@ class _PurchaseFormScreenState extends ConsumerState<PurchaseFormScreen> {
                           onFieldSubmitted: (_) => _handleSubmit(),
                         ),
                         const SizedBox(height: 12),
-                        // เลือกสกุลเงินแบบ SegmentedButton ใช้ง่าย เร็ว
                         Align(
                           alignment: Alignment.centerLeft,
                           child: Column(
