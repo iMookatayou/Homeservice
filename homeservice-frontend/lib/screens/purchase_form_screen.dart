@@ -288,7 +288,7 @@ class _PurchaseFormScreenState extends ConsumerState<PurchaseFormScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 120), // เผื่อพื้นที่เหนือปุ่มล่าง
+                const SizedBox(height: 120),
               ],
             ),
           ),
