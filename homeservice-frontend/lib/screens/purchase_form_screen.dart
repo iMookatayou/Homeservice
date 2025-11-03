@@ -63,7 +63,6 @@ class _PurchaseFormScreenState extends ConsumerState<PurchaseFormScreen> {
     FocusScope.of(context).unfocus();
 
     if (!(_formKey.currentState?.validate() ?? false)) {
-      // เลื่อนไปหา field แรกที่ error
       await Future.delayed(const Duration(milliseconds: 80));
       _scrollToFirstError();
       return;
