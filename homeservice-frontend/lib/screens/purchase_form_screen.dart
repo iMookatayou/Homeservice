@@ -155,7 +155,6 @@ class _PurchaseFormScreenState extends ConsumerState<PurchaseFormScreen> {
               padding: const EdgeInsets.all(spacing),
               keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
               children: [
-                // หัวข้อส่วน
                 Text(
                   'รายละเอียดรายการ',
                   style: theme.textTheme.titleMedium?.copyWith(
