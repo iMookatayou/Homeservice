@@ -110,7 +110,6 @@ class _PurchaseFormScreenState extends ConsumerState<PurchaseFormScreen> {
   }
 
   void _scrollToFirstError() {
-    // ฟอร์มนี้สั้น เลยโฟกัสไปที่ title ถ้าไม่ผ่าน
     if (_validateTitle(_title.text) != null) {
       _fnTitle.requestFocus();
     } else if (_validateAmount(_amount.text) != null) {
