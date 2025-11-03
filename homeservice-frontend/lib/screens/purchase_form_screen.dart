@@ -148,7 +148,7 @@ class _PurchaseFormScreenState extends ConsumerState<PurchaseFormScreen> {
       ),
       body: SafeArea(
         child: AbsorbPointer(
-          absorbing: _submitting, // กันจิ้มซ้ำระหว่างโหลด
+          absorbing: _submitting, 
           child: Form(
             key: _formKey,
             child: ListView(
