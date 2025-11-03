@@ -109,7 +109,6 @@ class _PurchaseFormScreenState extends ConsumerState<PurchaseFormScreen> {
     }
   }
 
-  // เลื่อนขึ้นหา field แรกที่ error แบบนุ่มนวล
   void _scrollToFirstError() {
     // ฟอร์มนี้สั้น เลยโฟกัสไปที่ title ถ้าไม่ผ่าน
     if (_validateTitle(_title.text) != null) {
