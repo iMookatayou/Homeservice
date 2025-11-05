@@ -2,10 +2,6 @@
 
 part of 'media_post.dart';
 
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
-
 MediaPost _$MediaPostFromJson(Map<String, dynamic> json) => MediaPost(
   id: json['id'] as String,
   channelId: json['channel_id'] as String,
