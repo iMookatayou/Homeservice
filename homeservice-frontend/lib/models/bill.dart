@@ -7,7 +7,7 @@ class Bill {
   final String title;
   final double amount;
   final DateTime dueDate;
-  final String status; // unpaid | paid
+  final String status;
   final String? note;
   final String createdBy;
   final DateTime createdAt;
