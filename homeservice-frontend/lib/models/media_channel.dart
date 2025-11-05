@@ -5,7 +5,7 @@ part 'media_channel.g.dart';
 class MediaChannel {
   final String id;
   final String source;
-  final String channelId; // UCxxxx
+  final String channelId;
   final String displayName;
   final String url;
   final String createdBy;
