@@ -6,7 +6,7 @@ class MediaPost {
   final String id;
   final String channelId;
   final String source;
-  final String externalId; // videoId
+  final String externalId;
   final String title;
   final String url;
   final String thumbnailUrl;
