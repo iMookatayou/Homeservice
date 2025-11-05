@@ -5,7 +5,7 @@ part 'media_post.g.dart';
 class MediaPost {
   final String id;
   final String channelId;
-  final String source; // 'youtube'
+  final String source;
   final String externalId; // videoId
   final String title;
   final String url;
