@@ -1,5 +1,3 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
-
 part of 'media_post.dart';
 
 MediaPost _$MediaPostFromJson(Map<String, dynamic> json) => MediaPost(
