@@ -2,10 +2,6 @@
 
 part of 'media_channel.dart';
 
-// **************************************************************************
-// JsonSerializableGenerator
-// **************************************************************************
-
 MediaChannel _$MediaChannelFromJson(Map<String, dynamic> json) => MediaChannel(
   id: json['id'] as String,
   source: json['source'] as String,
