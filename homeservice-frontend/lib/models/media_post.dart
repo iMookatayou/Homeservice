@@ -3,7 +3,7 @@ part 'media_post.g.dart';
 
 @JsonSerializable(fieldRename: FieldRename.snake)
 class MediaPost {
-  final String id; // uuid
+  final String id;
   final String channelId; // fk -> media_channels.id
   final String source; // 'youtube'
   final String externalId; // videoId
