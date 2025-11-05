@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 @immutable
 class Bill {
   final String id;
-  final String type; // electric, water, internet, phone, ...
+  final String type;
   final String title;
   final double amount;
   final DateTime dueDate;
