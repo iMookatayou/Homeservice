@@ -1,5 +1,3 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
-
 part of 'media_channel.dart';
 
 MediaChannel _$MediaChannelFromJson(Map<String, dynamic> json) => MediaChannel(
