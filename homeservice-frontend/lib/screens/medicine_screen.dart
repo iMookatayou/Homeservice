@@ -43,8 +43,6 @@ class _MedicineScreenState extends ConsumerState<MedicineScreen> {
         appBar: TopNavBar(
           title: 'Medicine Stock',
           actions: const [
-            // ใส่ไอคอนเพิ่มได้ภายหลัง เช่น ค้นหา/ตัวกรอง ให้หน้าตาเหมือน Purchases
-            // Icon(Icons.search, size: 22),
           ],
         ),
 
