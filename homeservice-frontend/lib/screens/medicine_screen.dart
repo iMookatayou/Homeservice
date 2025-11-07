@@ -30,7 +30,7 @@ class _MedicineScreenState extends ConsumerState<MedicineScreen> {
   Widget build(BuildContext context) {
     final query = _search.text.trim();
     final asyncItems = ref.watch(medicineListProvider(query));
-    const accent = Color(0xFF1F4E9E); // same tone as Purchases
+    const accent = Color(0xFF1F4E9E);
 
     return Theme(
       data: Theme.of(context).copyWith(
