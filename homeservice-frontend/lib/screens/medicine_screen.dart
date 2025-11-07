@@ -134,7 +134,6 @@ class _MedicineCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ปลอดภัยกับ null flags
     final st = item.status;
     final expired = st?.expired ?? false;
     final expirySoon = st?.expirySoon ?? false;
