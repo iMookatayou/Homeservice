@@ -82,7 +82,6 @@ class _MedicineScreenState extends ConsumerState<MedicineScreen> {
                   ),
                 ),
 
-                // เนื้อหา
                 asyncItems.when(
                   data: (items) {
                     if (items.isEmpty) {
