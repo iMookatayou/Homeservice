@@ -63,7 +63,6 @@ class _MedicineScreenState extends ConsumerState<MedicineScreen> {
             },
             child: CustomScrollView(
               slivers: [
-                // ✅ Header แถวค้นหา + LastUpdated (ใช้ widget ที่มี)
                 SliverToBoxAdapter(
                   child: Padding(
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
