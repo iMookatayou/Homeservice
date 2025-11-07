@@ -46,7 +46,6 @@ class _MedicineScreenState extends ConsumerState<MedicineScreen> {
           ],
         ),
 
-        // ❗ ตามคำสั่ง: ไม่ยุ่ง/ไม่เพิ่ม widget ปุ่มลอย ใช้ของเดิมไปก่อน
         floatingActionButton: FloatingActionButton.extended(
           backgroundColor: accent,
           foregroundColor: Colors.white,
