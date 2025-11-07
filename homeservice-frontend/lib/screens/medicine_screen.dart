@@ -40,7 +40,6 @@ class _MedicineScreenState extends ConsumerState<MedicineScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF7F9FC),
 
-        // ✅ Header เหมือน Purchases: ใช้ TopNavBar (มีอยู่แล้ว)
         appBar: TopNavBar(
           title: 'Medicine Stock',
           actions: const [
