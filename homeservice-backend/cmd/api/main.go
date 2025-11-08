@@ -74,7 +74,6 @@ func main() {
 		StaleAfter: 3 * time.Minute,
 	}
 
-	// --- medicine ---
 	mRepo := medicine.NewPGRepo(pool)
 	mSvc := &medicine.Service{Repo: mRepo, Now: time.Now}
 
