@@ -48,7 +48,6 @@ func main() {
 
 	wHandler := weather.Handler{}
 
-	// --- storage/files ---
 	st := storage.New(cfg)
 	fRepo := files.Repo{DB: pool}
 	fHandler := files.Handler{Repo: fRepo, Storage: st, JWTSecret: cfg.JWTSecret}
