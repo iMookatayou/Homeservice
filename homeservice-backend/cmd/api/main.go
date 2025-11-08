@@ -17,7 +17,6 @@ import (
 	"github.com/iMookatayou/homeservice-backend/internal/user"
 	"github.com/iMookatayou/homeservice-backend/internal/weather"
 
-	// modules
 	"github.com/iMookatayou/homeservice-backend/internal/bills"
 	"github.com/iMookatayou/homeservice-backend/internal/contractors"
 	"github.com/iMookatayou/homeservice-backend/internal/files"
