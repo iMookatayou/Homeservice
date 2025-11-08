@@ -46,7 +46,6 @@ func main() {
 	nRepo := notes.Repo{DB: pool}
 	nHandler := notes.Handler{Repo: nRepo}
 
-	// --- weather (stateless) ---
 	wHandler := weather.Handler{}
 
 	// --- storage/files ---
