@@ -39,8 +39,7 @@ func main() {
 		logger.Fatal("db connect", zap.Error(err))
 	}
 	defer pool.Close()
-
-	// --- users/auth ---
+	
 	uRepo := user.Repo{DB: pool}
 	uHandler := user.Handler{Repo: uRepo, JWTSecret: cfg.JWTSecret}
 
