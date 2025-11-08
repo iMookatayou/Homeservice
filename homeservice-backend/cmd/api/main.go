@@ -83,7 +83,6 @@ func main() {
 	}
 	defer acqMedia.Release()
 
-	// Repo สำหรับ API (implements media.Repo)
 	mdRepo := media.NewPGRepo(acqMedia.Conn())
 	mdSvc := media.NewService(mdRepo)
 	mdH := media.NewHandler(mdSvc)
