@@ -43,7 +43,6 @@ func main() {
 	uRepo := user.Repo{DB: pool}
 	uHandler := user.Handler{Repo: uRepo, JWTSecret: cfg.JWTSecret}
 
-	// --- notes ---
 	nRepo := notes.Repo{DB: pool}
 	nHandler := notes.Handler{Repo: nRepo}
 
