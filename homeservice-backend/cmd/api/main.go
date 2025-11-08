@@ -87,7 +87,6 @@ func main() {
 	mdSvc := media.NewService(mdRepo)
 	mdH := media.NewHandler(mdSvc)
 
-	// WorkerRepo สำหรับ RSS worker (ใช้ *pgxpool.Pool)
 	wRepo := media.NewWorkerRepo(pool)
 
 	// --- router & middlewares ---
