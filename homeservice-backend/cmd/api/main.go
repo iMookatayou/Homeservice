@@ -94,7 +94,6 @@ func main() {
 		r.Use(m)
 	}
 
-	// serve local uploads (dev only)
 	if cfg.StorageBackend == "local" && cfg.LocalDir != "" {
 		fs := http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.LocalDir)))
 		r.Handle("/static/*", fs)
