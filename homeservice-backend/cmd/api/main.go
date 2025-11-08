@@ -70,7 +70,7 @@ func main() {
 	stkRepo := stocks.NewPgRepo(pool)
 	stkSvc := &stocks.Service{
 		Repo:       stkRepo,
-		Prov:       stocks.NewMockProvider(), // ภายหลังสลับเป็นของจริงได้
+		Prov:       stocks.NewMockProvider(), 
 		StaleAfter: 3 * time.Minute,
 	}
 
