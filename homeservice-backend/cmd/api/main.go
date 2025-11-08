@@ -77,8 +77,6 @@ func main() {
 	mRepo := medicine.NewPGRepo(pool)
 	mSvc := &medicine.Service{Repo: mRepo, Now: time.Now}
 
-	// --- media (YouTube RSS -> media_posts) ---
-	// ใช้ *pgx.Conn เดี่ยวจาก pool สำหรับ API repo (ถ้า constructor ต้องการ Conn)
 	acqMedia, err := pool.Acquire(ctx)
 	if err != nil {
 		logger.Fatal("acquire media conn", zap.Error(err))
