@@ -52,7 +52,6 @@ func main() {
 	fRepo := files.Repo{DB: pool}
 	fHandler := files.Handler{Repo: fRepo, Storage: st, JWTSecret: cfg.JWTSecret}
 
-	// --- purchases ---
 	pRepo := purchases.NewRepo(pool)
 	pSvc := purchases.NewService(pRepo)
 	pHandler := purchases.Handler{Svc: pSvc}
