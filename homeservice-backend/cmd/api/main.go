@@ -67,7 +67,6 @@ func main() {
 	bHandler := bills.Handler{Svc: bSvc}
 	bRegistrar := bills.Registrar{H: bHandler}
 
-	// --- stocks (repo + service + mock provider สำหรับ dev/MVP) ---
 	stkRepo := stocks.NewPgRepo(pool)
 	stkSvc := &stocks.Service{
 		Repo:       stkRepo,
