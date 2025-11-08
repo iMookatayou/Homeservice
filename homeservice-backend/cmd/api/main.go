@@ -89,7 +89,6 @@ func main() {
 
 	wRepo := media.NewWorkerRepo(pool)
 
-	// --- router & middlewares ---
 	r := chi.NewRouter()
 	for _, m := range httpx.CommonMiddlewares(cfg.CorsOrigin) {
 		r.Use(m)
