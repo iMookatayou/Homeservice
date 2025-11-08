@@ -57,7 +57,6 @@ func main() {
 	pHandler := purchases.Handler{Svc: pSvc}
 	pRegistrar := purchases.Registrar{H: pHandler}
 
-	// --- contractors (Overpass API, no map SDK) ---
 	httpClient := &http.Client{Timeout: 15 * time.Second}
 	ctrRepo := contractors.NewRepo(10 * time.Minute)          // in-memory cache
 	ctrSvc := contractors.NewService(httpClient, ctrRepo, "") // default Overpass endpoint
