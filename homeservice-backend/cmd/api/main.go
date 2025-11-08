@@ -99,7 +99,6 @@ func main() {
 		r.Handle("/static/*", fs)
 	}
 
-	// health
 	r.Get("/healthz", health.Live)
 	r.Get("/readyz", health.Ready)
 
