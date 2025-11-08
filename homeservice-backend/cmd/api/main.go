@@ -58,8 +58,8 @@ func main() {
 	pRegistrar := purchases.Registrar{H: pHandler}
 
 	httpClient := &http.Client{Timeout: 15 * time.Second}
-	ctrRepo := contractors.NewRepo(10 * time.Minute)          // in-memory cache
-	ctrSvc := contractors.NewService(httpClient, ctrRepo, "") // default Overpass endpoint
+	ctrRepo := contractors.NewRepo(10 * time.Minute)          
+	ctrSvc := contractors.NewService(httpClient, ctrRepo, "") 
 	ctrH := contractors.Handler{Svc: ctrSvc}
 
 	// --- bills ---
