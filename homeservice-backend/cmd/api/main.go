@@ -25,7 +25,6 @@ import (
 	"github.com/iMookatayou/homeservice-backend/internal/stocks"
 	"github.com/iMookatayou/homeservice-backend/internal/storage"
 
-	// media module
 	"github.com/iMookatayou/homeservice-backend/internal/media"
 )
 
