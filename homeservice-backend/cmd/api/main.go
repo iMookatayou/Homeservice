@@ -62,7 +62,6 @@ func main() {
 	ctrSvc := contractors.NewService(httpClient, ctrRepo, "") 
 	ctrH := contractors.Handler{Svc: ctrSvc}
 
-	// --- bills ---
 	bRepo := bills.Repo{DB: pool}
 	bSvc := bills.NewService(bRepo)
 	bHandler := bills.Handler{Svc: bSvc}
