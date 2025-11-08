@@ -101,8 +101,6 @@ func main() {
 
 	r.Get("/healthz", health.Live)
 	r.Get("/readyz", health.Ready)
-
-	// API v1
 	r.Route("/api/v1", func(api chi.Router) {
 		// --- public ---
 		api.Post("/auth/register", uHandler.Register)
