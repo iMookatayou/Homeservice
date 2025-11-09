@@ -42,7 +42,7 @@ type Handler struct {
 }
 
 func (h *Handler) listItems(w http.ResponseWriter, r *http.Request) {
-	householdID := r.Header.Get("X-Debug-Household") // ชั่วคราว (ภายหลังจะมาจาก auth ctx)
+	householdID := r.Header.Get("X-Debug-Household")
 	f := ListItemFilter{
 		Query:        r.URL.Query().Get("q"),
 		Category:     r.URL.Query().Get("category"),
