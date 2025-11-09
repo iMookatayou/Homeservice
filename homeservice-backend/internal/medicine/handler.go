@@ -8,7 +8,6 @@ import (
 	"github.com/iMookatayou/homeservice-backend/internal/httpx"
 )
 
-// MountHTTP ติดตั้ง route ทั้งหมดของโมดูล medicine
 func MountHTTP(r chi.Router, svc *Service) {
 	h := &Handler{svc: svc}
 
