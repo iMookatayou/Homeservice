@@ -1,4 +1,3 @@
-// internal/medicine/handler.go
 package medicine
 
 import (
