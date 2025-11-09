@@ -41,8 +41,6 @@ type Handler struct {
 	svc *Service
 }
 
-// ------------------- Items -------------------
-
 func (h *Handler) listItems(w http.ResponseWriter, r *http.Request) {
 	householdID := r.Header.Get("X-Debug-Household") // ชั่วคราว (ภายหลังจะมาจาก auth ctx)
 	f := ListItemFilter{
