@@ -1,11 +1,9 @@
-// lib/screens/medicine_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import '../state/medicine_provider.dart';
 
-// widgets ที่อยู่โฟลเดอร์ lib/widgets/
 import '../widgets/batch_tile.dart';
 import '../widgets/qty_badge.dart' as q;
 import '../widgets/alert_badge.dart';
