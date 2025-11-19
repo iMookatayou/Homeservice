@@ -157,7 +157,6 @@ func main() {
 		}).Run(context.Background())
 	}()
 
-	// Media RSS worker — ใช้ WorkerRepo ใหม่
 	go func() {
 		worker := media.NewRSSWorker(wRepo, 3*time.Minute, 5*time.Second, 100)
 		_ = worker.Run(context.Background())
