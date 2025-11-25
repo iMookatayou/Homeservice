@@ -142,7 +142,7 @@ func main() {
 		})
 	})
 
-	// (optional) debug: dump all routes at startup
+	// debug: dump all routes at startup
 	_ = chi.Walk(r, func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
 		logger.Info("route", zap.String("method", method), zap.String("path", route))
 		return nil
