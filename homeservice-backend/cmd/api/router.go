@@ -20,7 +20,7 @@ type Deps struct {
 func NewRouter(deps Deps) http.Handler {
 	r := chi.NewRouter()
 
-	// Middlewares พื้นฐาน
+	// Middlewares
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
