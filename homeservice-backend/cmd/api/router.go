@@ -26,7 +26,7 @@ func NewRouter(deps Deps) http.Handler {
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Logger)
 	r.Use(middleware.Timeout(30 * time.Second))
-	r.Use(middleware.RedirectSlashes) // normalize / กับ ไม่มี /
+	r.Use(middleware.RedirectSlashes) // normalize 
 
 	// health
 	r.Get("/healthz", func(w http.ResponseWriter, _ *http.Request) {
