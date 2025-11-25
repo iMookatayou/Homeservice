@@ -132,7 +132,7 @@ func main() {
 				medicine.MountHTTP(r, mSvc)
 			})
 
-			// media (จะได้ /api/v1/media/...)
+			// media
 			mdH.Mount(pr)
 		})
 
