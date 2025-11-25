@@ -102,12 +102,12 @@ func main() {
 	r.Get("/healthz", health.Live)
 	r.Get("/readyz", health.Ready)
 	r.Route("/api/v1", func(api chi.Router) {
-		//public 
+		// public 
 		api.Post("/auth/register", uHandler.Register)
 		api.Post("/auth/login", uHandler.Login)
 		api.Get("/weather/today", wHandler.Today)
 
-		// contractors search (public)
+		// contractors search 
 		ctrH.RegisterRoutes(api)
 
 		// --- auth-required ---
