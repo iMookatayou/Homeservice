@@ -43,7 +43,7 @@ func NewRouter(deps Deps) http.Handler {
 		stocks.RegisterRoutes(r, &stocks.Handler{SVC: deps.StocksSvc})
 	})
 
-	// DEBUG: พิมพ์ route ทั้งหมด (ช่วยไล่ 404)
+	// debug
 	_ = chi.Walk(r, func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
 		log.Printf("%s %s", method, route)
 		return nil
