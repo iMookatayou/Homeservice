@@ -58,7 +58,7 @@ func RequireAuth(secret string, newClaims func() *Claims) func(http.Handler) htt
 				return
 			}
 
-			// ✅ Passed — log summary of claims
+			// Passed — log summary of claims
 			exp := claims.ExpiresAt.Time
 			expStr := exp.Format(time.RFC3339)
 			uid := claims.UserID
