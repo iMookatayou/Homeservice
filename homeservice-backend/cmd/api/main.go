@@ -110,7 +110,7 @@ func main() {
 		// contractors search 
 		ctrH.RegisterRoutes(api)
 
-		// --- auth-required ---
+		// auth-required
 		api.Group(func(pr chi.Router) {
 			pr.Use(auth.RequireAuth(cfg.JWTSecret, auth.NewClaims))
 			pr.Get("/me", uHandler.Me)
