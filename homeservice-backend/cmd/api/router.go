@@ -34,7 +34,7 @@ func NewRouter(deps Deps) http.Handler {
 		_, _ = w.Write([]byte("ok"))
 	})
 
-	// API v1 (ครอบที่นี่ที่เดียว)
+	// API
 	r.Route("/api/v1", func(r chi.Router) {
 		purchases.Registrar{
 			H: purchases.Handler{Svc: deps.PurchasesSvc},
