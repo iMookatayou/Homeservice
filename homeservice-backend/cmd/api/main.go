@@ -136,7 +136,7 @@ func main() {
 			mdH.Mount(pr)
 		})
 
-		// --- admin-only (reserved) ---
+		// admin-only
 		api.Group(func(ad chi.Router) {
 			ad.Use(auth.RequireAdmin(cfg.JWTSecret, auth.NewClaims))
 		})
