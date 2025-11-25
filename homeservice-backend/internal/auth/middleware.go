@@ -98,7 +98,6 @@ func OptionalAuth(secret string, newClaims func() *Claims) func(http.Handler) ht
 	}
 }
 
-// ดึง claims/user id ออกมาใช้
 func ClaimsFrom(r *http.Request) *Claims {
 	if v := r.Context().Value(userCtxKey); v != nil {
 		if c, ok := v.(*Claims); ok {
