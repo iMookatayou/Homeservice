@@ -34,7 +34,7 @@ func keyFuncHMAC(secret string) jwt.Keyfunc {
 	}
 }
 
-// RequireAuth — ตรวจ JWT + log ทุกเคสสำคัญ
+// RequireAuth
 func RequireAuth(secret string, newClaims func() *Claims) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
