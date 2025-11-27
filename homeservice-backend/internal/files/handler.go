@@ -51,7 +51,7 @@ func (h Handler) UploadLocal(w http.ResponseWriter, r *http.Request) {
 	}
 	defer file.Close()
 
-	// --- MIME resolve: header → by extension ---
+	//MIME resolve
 	mtype := header.Header.Get("Content-Type")
 	if mtype == "" {
 		mtype = mime.TypeByExtension(filepath.Ext(header.Filename)) 
@@ -61,7 +61,7 @@ func (h Handler) UploadLocal(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// --- Size resolve: header → override ด้วย form value ได้ ---
+	//Size resolve
 	size := header.Size
 	if size <= 0 {
 		if v := r.FormValue("size"); v != "" {
