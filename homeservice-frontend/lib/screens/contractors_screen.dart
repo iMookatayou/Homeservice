@@ -45,7 +45,6 @@ class _ContractorsScreenState extends ConsumerState<ContractorsScreen> {
       ),
       body: Column(
         children: [
-          // ── Location status (เฉพาะกรณี error/ปิดสิทธิ์เท่านั้น) ───────────────
           _LocationBanner(
             locAsync: locAsync,
             onRefresh: () {
