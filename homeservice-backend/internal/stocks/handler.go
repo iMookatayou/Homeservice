@@ -23,7 +23,7 @@ func RegisterRoutes(r chi.Router, h *Handler) {
 		r.Get("/quote", h.getQuote)
 		r.Get("/quotes:batch", h.batchQuotes)
 
-		// เมธอดสองตัวนี้ต้องมีด้วย ไม่งั้น compile error
+		// compile error
 		r.Post("/watch/{id}/snapshots", h.createSnapshot)
 		r.Get("/watch/{id}/snapshots", h.listSnapshots)
 	})
