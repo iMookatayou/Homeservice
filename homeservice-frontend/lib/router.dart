@@ -57,7 +57,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     refreshListenable: GoRouterRefreshNotifier(ref),
 
     routes: [
-      // ---------- Public ----------
+      // Public
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
@@ -70,7 +70,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const ForgotPasswordScreen(),
       ),
 
-      // ---------- Private ----------
+      // Private
       GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
       GoRoute(path: '/notes', builder: (_, __) => const NotesScreen()),
       GoRoute(
@@ -78,7 +78,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (_, __) => const ContractorsScreen(),
       ),
 
-      // ===== Purchases module =====
+      // Purchases module 
       GoRoute(
         path: '/purchases',
         builder: (_, __) => const PurchaseScreen(),
@@ -105,7 +105,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
-      // ===== Bills module =====
+      // Bills module
       GoRoute(
         path: '/bills',
         builder: (_, __) => const BillsScreen(),
@@ -122,7 +122,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
-      // ===== Medicine module =====
+      // Medicine module
       GoRoute(
         path: '/medicine',
         builder: (_, __) => const MedicineScreen(),
@@ -135,7 +135,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      // ===== Stocks module =====
+      // Stocks module
       GoRoute(
         path: '/stocks',
         builder: (_, __) => const StocksWatchlistScreen(),
