@@ -64,7 +64,7 @@ func (s *Service) GetLatestQuote(ctx context.Context, ex, sym string) (*QuoteRes
 	return resp, nil
 }
 
-// สำหรับ batch endpoint (อ่านจาก DB/แคชเป็นหลัก; worker จะคอยอัปเดตเอง)
+// batch endpoint 
 func (s *Service) GetBatchQuotes(ctx context.Context, pairs [][2]string) (*BatchQuotesResponse, error) {
 	var items []QuoteResponse
 	for _, p := range pairs {
