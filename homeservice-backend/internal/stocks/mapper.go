@@ -2,7 +2,7 @@ package stocks
 
 import "strings"
 
-// ToProviderSymbol แปลงรูปแบบสัญลักษณ์ตามตลาด/ผู้ให้บริการ
+// ToProviderSymbol
 func ToProviderSymbol(exchange, symbol string) string {
 	switch exchangeUpper := strings.ToUpper(exchange); exchangeUpper {
 	case "SET":
