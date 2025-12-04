@@ -14,12 +14,11 @@ type Handler struct {
 	Svc *Service
 }
 
-// ใช้ใน main.go หรือ register route ภายในได้เหมือนกัน
 func (h Handler) RegisterRoutes(r chi.Router) {
 	r.Get("/contractors/search", h.Search)
 }
 
-// Handler หลักสำหรับค้นหารายชื่อช่าง
+// Handler 
 func (h Handler) Search(w http.ResponseWriter, r *http.Request) {
 	lat, _ := strconv.ParseFloat(r.URL.Query().Get("lat"), 64)
 	lng, _ := strconv.ParseFloat(r.URL.Query().Get("lng"), 64)
