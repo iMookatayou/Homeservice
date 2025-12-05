@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-// RSSWorker: ดึง YouTube RSS ของทุก channel ที่มีคน subscribe → upsert media_posts
+// RSSWorker
 type RSSWorker struct {
 	Repo            WorkerRepo
 	Every           time.Duration // ex: 3 * time.Minute
