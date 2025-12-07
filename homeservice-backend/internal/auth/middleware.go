@@ -114,7 +114,7 @@ func UserIDFrom(r *http.Request) (string, bool) {
 	return "", false
 }
 
-// RequireAdmin — auth + log + เช็ค role admin
+// RequireAdmin — auth + log 
 func RequireAdmin(secret string, newClaims func() *Claims) func(http.Handler) http.Handler {
 	base := RequireAuth(secret, newClaims)
 	return func(next http.Handler) http.Handler {
