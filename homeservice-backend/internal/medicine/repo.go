@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Repo คือ interface สำหรับสื่อสารกับ PostgreSQL
+// Repo interface PostgreSQL
 type Repo interface {
 	CreateItem(ctx context.Context, it *MedicineItem) error
 	GetItem(ctx context.Context, householdID, itemID string) (*MedicineItem, error)
@@ -31,9 +31,6 @@ type Repo interface {
 	GetAlert(ctx context.Context, itemID string) (*MedicineAlert, error)
 }
 
-// ---------------------------------------------
-// PostgreSQL implementation
-// ---------------------------------------------
 type pgRepo struct {
 	db *db.Pool
 }
