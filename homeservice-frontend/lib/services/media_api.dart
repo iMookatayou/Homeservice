@@ -7,7 +7,7 @@ class MediaApi {
   final Dio dio;
   MediaApi(this.dio);
 
-  // ===== Channels (global) =====
+  // Channels 
   Future<MediaChannel> createChannel({
     required String source, // 'youtube'
     required String channelId,
