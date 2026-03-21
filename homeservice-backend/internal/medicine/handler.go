@@ -1,268 +1,190 @@
 package medicine
 
 import (
+	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/google/uuid"
 	"github.com/iMookatayou/homeservice-backend/internal/httpx"
 )
 
-func MountHTTP(r chi.Router, svc *Service) {
-	h := &Handler{svc: svc}
-
-	r.Get("/", h.listItems)
-	r.Post("/", h.createItem)
-	r.Get("/{id}", h.getItem)
-	r.Patch("/{id}", h.updateItem)
-	r.Delete("/{id}", h.archiveItem)
-
-	r.Route("/{id}/batches", func(r chi.Router) {
-		r.Post("/", h.addBatch)
-		r.Get("/", h.listBatches)
-	})
-
-	r.Route("/{id}/txns", func(r chi.Router) {
-		r.Post("/in", h.receiveIn)
-		r.Post("/out", h.useOut)
-		r.Post("/adjust", h.adjust)
-	})
-
-	r.Route("/{id}/alert", func(r chi.Router) {
-		r.Put("/", h.setAlert)
-		r.Get("/", h.getAlert)
-	})
-
-	r.Get("/locations", h.listLocations)
-	r.Post("/locations", h.createLocation)
-}
-
 type Handler struct {
-	svc *Service
+	Svc *Service
 }
 
-func (h *Handler) listItems(w http.ResponseWriter, r *http.Request) {
-	householdID := r.Header.Get("X-Debug-Household")
+func NewHandler(svc *Service) *Handler {
+	return &Handler{Svc: svc}
+}
+
+func (h *Handler) RegisterRoutes(r chi.Router) {
+	r.Get("/", h.list)
+	r.Post("/", h.create)
+	r.Get("/low-stock", h.listLowStock)
+	r.Get("/expiring", h.listExpiringSoon)
+	r.Get("/expired", h.listExpired)
+
+	r.Route("/{id}", func(r chi.Router) {
+		r.Get("/", h.getByID)
+		r.Patch("/", h.update)
+		r.Delete("/", h.delete)
+		r.Post("/stock", h.adjustStock)
+		r.Get("/alert", h.getAlert)
+		r.Put("/alert", h.upsertAlert)
+	})
+}
+
+func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
+	p := httpx.ParsePagination(r)
 	f := ListItemFilter{
 		Query:        r.URL.Query().Get("q"),
 		Category:     r.URL.Query().Get("category"),
-		Form:         r.URL.Query().Get("form"),
-		LocationID:   r.URL.Query().Get("location_id"),
 		OnlyLow:      r.URL.Query().Get("only_low") == "1",
 		OnlyExpiring: r.URL.Query().Get("only_expiring") == "1",
-		Sort:         r.URL.Query().Get("sort"),
+		Limit:        p.Limit,
+		Offset:       p.Offset,
 	}
-
-	items, err := h.svc.ListItems(r.Context(), householdID, f)
+	items, err := h.Svc.ListItems(r.Context(), f)
 	if err != nil {
-		httpx.JSON(w, 500, map[string]any{"error": err.Error()})
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	httpx.JSON(w, 200, items)
+	httpx.Paginate(w, items, p)
 }
 
-func (h *Handler) createItem(w http.ResponseWriter, r *http.Request) {
-	householdID := r.Header.Get("X-Debug-Household")
-	var it MedicineItem
-	if err := httpx.BindJSON(r, &it); err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": "invalid JSON"})
-		return
-	}
-	it.ID = uuid.NewString()
-	it.HouseholdID = householdID
-
-	if err := h.svc.CreateItem(r.Context(), &it); err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": err.Error()})
-		return
-	}
-	httpx.JSON(w, 201, it)
-}
-
-func (h *Handler) getItem(w http.ResponseWriter, r *http.Request) {
-	householdID := r.Header.Get("X-Debug-Household")
+func (h *Handler) getByID(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-
-	item, err := h.svc.GetItemFull(r.Context(), householdID, id)
+	it, err := h.Svc.GetItem(r.Context(), id)
 	if err != nil {
-		code := 500
-		if err == ErrNotFound {
-			code = 404
+		if errors.Is(err, ErrNotFound) {
+			httpx.JSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+			return
 		}
-		httpx.JSON(w, code, map[string]any{"error": err.Error()})
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	httpx.JSON(w, 200, item)
+	httpx.JSON(w, http.StatusOK, it)
 }
 
-func (h *Handler) updateItem(w http.ResponseWriter, r *http.Request) {
-	householdID := r.Header.Get("X-Debug-Household")
+func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
+	var p CreateItemPayload
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
+		return
+	}
+	it, err := h.Svc.CreateItem(r.Context(), p)
+	if err != nil {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	httpx.JSON(w, http.StatusCreated, it)
+}
+
+func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	var patch map[string]any
-	if err := httpx.BindJSON(r, &patch); err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": "invalid JSON"})
+	var p UpdateItemPayload
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
 		return
 	}
-	if err := h.svc.UpdateItemPartial(r.Context(), householdID, id, patch); err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": err.Error()})
+	it, err := h.Svc.UpdateItem(r.Context(), id, p)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			httpx.JSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+			return
+		}
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	httpx.JSON(w, 200, map[string]any{"updated": true})
+	httpx.JSON(w, http.StatusOK, it)
 }
 
-func (h *Handler) archiveItem(w http.ResponseWriter, r *http.Request) {
-	householdID := r.Header.Get("X-Debug-Household")
+func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	if err := h.svc.ArchiveItem(r.Context(), householdID, id); err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": err.Error()})
+	if err := h.Svc.DeleteItem(r.Context(), id); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			httpx.JSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+			return
+		}
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	httpx.JSON(w, 200, map[string]any{"archived": true})
+	w.WriteHeader(http.StatusNoContent)
 }
 
-// ------------------- Batch -------------------
-
-func (h *Handler) addBatch(w http.ResponseWriter, r *http.Request) {
-	householdID := r.Header.Get("X-Debug-Household")
-	itemID := chi.URLParam(r, "id")
-	var b MedicineBatch
-	if err := httpx.BindJSON(r, &b); err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": "invalid JSON"})
+func (h *Handler) adjustStock(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var p struct {
+		Delta float64 `json:"delta"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
 		return
 	}
-	b.ID = uuid.NewString()
-	b.ItemID = itemID
-	if err := h.svc.AddBatch(r.Context(), householdID, &b); err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": err.Error()})
-		return
-	}
-	httpx.JSON(w, 201, b)
-}
-
-func (h *Handler) listBatches(w http.ResponseWriter, r *http.Request) {
-	itemID := chi.URLParam(r, "id")
-	bs, err := h.svc.Repo.GetBatchesByItem(r.Context(), itemID)
+	it, err := h.Svc.AdjustStock(r.Context(), id, p.Delta)
 	if err != nil {
-		httpx.JSON(w, 500, map[string]any{"error": err.Error()})
+		if errors.Is(err, ErrNotFound) {
+			httpx.JSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+			return
+		}
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
 		return
 	}
-	httpx.JSON(w, 200, bs)
-}
-
-// ------------------- Transactions -------------------
-
-func (h *Handler) receiveIn(w http.ResponseWriter, r *http.Request) {
-	itemID := chi.URLParam(r, "id")
-	var payload struct {
-		BatchID string  `json:"batch_id"`
-		Qty     float64 `json:"qty"`
-		Reason  *string `json:"reason"`
-		Actor   string  `json:"actor_user_id"`
-	}
-	if err := httpx.BindJSON(r, &payload); err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": "invalid JSON"})
-		return
-	}
-	res, err := h.svc.ReceiveIn(r.Context(), itemID, payload.BatchID, payload.Qty, payload.Reason, payload.Actor)
-	if err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": err.Error()})
-		return
-	}
-	httpx.JSON(w, 200, res)
-}
-
-func (h *Handler) useOut(w http.ResponseWriter, r *http.Request) {
-	itemID := chi.URLParam(r, "id")
-	var payload struct {
-		Qty    float64 `json:"qty"`
-		Reason *string `json:"reason"`
-		Actor  string  `json:"actor_user_id"`
-	}
-	if err := httpx.BindJSON(r, &payload); err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": "invalid JSON"})
-		return
-	}
-	res, err := h.svc.UseOut(r.Context(), itemID, payload.Qty, payload.Reason, payload.Actor)
-	if err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": err.Error()})
-		return
-	}
-	httpx.JSON(w, 200, res)
-}
-
-func (h *Handler) adjust(w http.ResponseWriter, r *http.Request) {
-	itemID := chi.URLParam(r, "id")
-	var payload struct {
-		BatchID string  `json:"batch_id"`
-		Delta   float64 `json:"delta"`
-		Reason  *string `json:"reason"`
-		Actor   string  `json:"actor_user_id"`
-	}
-	if err := httpx.BindJSON(r, &payload); err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": "invalid JSON"})
-		return
-	}
-	res, err := h.svc.Adjust(r.Context(), itemID, payload.BatchID, payload.Delta, payload.Reason, payload.Actor)
-	if err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": err.Error()})
-		return
-	}
-	httpx.JSON(w, 200, res)
-}
-
-// ------------------- Alerts -------------------
-
-func (h *Handler) setAlert(w http.ResponseWriter, r *http.Request) {
-	itemID := chi.URLParam(r, "id")
-	var payload struct {
-		MinQty     *float64 `json:"min_qty"`
-		ExpiryDays *int     `json:"expiry_window_days"`
-		IsEnabled  *bool    `json:"is_enabled"`
-	}
-	if err := httpx.BindJSON(r, &payload); err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": "invalid JSON"})
-		return
-	}
-	if err := h.svc.SetAlert(r.Context(), itemID, payload.MinQty, payload.ExpiryDays, payload.IsEnabled); err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": err.Error()})
-		return
-	}
-	httpx.JSON(w, 200, map[string]any{"updated": true})
+	httpx.JSON(w, http.StatusOK, it)
 }
 
 func (h *Handler) getAlert(w http.ResponseWriter, r *http.Request) {
-	itemID := chi.URLParam(r, "id")
-	al, err := h.svc.Repo.GetAlert(r.Context(), itemID)
+	id := chi.URLParam(r, "id")
+	a, err := h.Svc.GetAlert(r.Context(), id)
 	if err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": err.Error()})
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	httpx.JSON(w, 200, al)
+	if a == nil {
+		httpx.JSON(w, http.StatusNotFound, map[string]string{"error": "no alert set"})
+		return
+	}
+	httpx.JSON(w, http.StatusOK, a)
 }
 
-// ------------------- Locations -------------------
-
-func (h *Handler) listLocations(w http.ResponseWriter, r *http.Request) {
-	householdID := r.Header.Get("X-Debug-Household")
-	locs, err := h.svc.Repo.ListLocations(r.Context(), householdID)
-	if err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": err.Error()})
+func (h *Handler) upsertAlert(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var a MedicineAlert
+	if err := json.NewDecoder(r.Body).Decode(&a); err != nil {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
 		return
 	}
-	httpx.JSON(w, 200, locs)
+	a.ItemID = id
+	if err := h.Svc.UpsertAlert(r.Context(), &a); err != nil {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	httpx.JSON(w, http.StatusOK, a)
 }
 
-func (h *Handler) createLocation(w http.ResponseWriter, r *http.Request) {
-	householdID := r.Header.Get("X-Debug-Household")
-	var loc MedicineLocation
-	if err := httpx.BindJSON(r, &loc); err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": "invalid JSON"})
+func (h *Handler) listLowStock(w http.ResponseWriter, r *http.Request) {
+	items, err := h.Svc.ListLowStock(r.Context())
+	if err != nil {
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	loc.ID = uuid.NewString()
-	loc.HouseholdID = householdID
-	if err := h.svc.Repo.CreateLocation(r.Context(), &loc); err != nil {
-		httpx.JSON(w, 400, map[string]any{"error": err.Error()})
+	httpx.JSON(w, http.StatusOK, items)
+}
+
+func (h *Handler) listExpiringSoon(w http.ResponseWriter, r *http.Request) {
+	items, err := h.Svc.ListExpiringSoon(r.Context())
+	if err != nil {
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	httpx.JSON(w, 201, loc)
+	httpx.JSON(w, http.StatusOK, items)
+}
+
+func (h *Handler) listExpired(w http.ResponseWriter, r *http.Request) {
+	items, err := h.Svc.ListExpired(r.Context())
+	if err != nil {
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	httpx.JSON(w, http.StatusOK, items)
 }

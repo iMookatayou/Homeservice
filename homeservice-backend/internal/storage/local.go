@@ -66,3 +66,7 @@ func (l *Local) Save(ctx context.Context, ownerID string, r io.Reader, filename,
 func (l *Local) PresignPut(ctx context.Context, ownerID, filename, mime string, size int64) (Presign, error) {
 	return Presign{}, ErrNotSupported
 }
+
+func (l *Local) Delete(ctx context.Context, key string) error {
+	return nil // local ไม่ต้องทำอะไร
+}

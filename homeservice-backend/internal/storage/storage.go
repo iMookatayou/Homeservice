@@ -25,4 +25,5 @@ type Presign struct {
 type Service interface {
 	Save(ctx context.Context, ownerID string, r io.Reader, filename, mime string, size int64) (PutResult, error)
 	PresignPut(ctx context.Context, ownerID, filename, mime string, size int64) (Presign, error)
+	Delete(ctx context.Context, key string) error
 }
