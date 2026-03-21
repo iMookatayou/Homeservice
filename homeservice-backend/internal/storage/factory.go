@@ -1,13 +1,20 @@
 package storage
 
-import "github.com/iMookatayou/homeservice-backend/internal/config"
+import (
+	"log"
+
+	"github.com/iMookatayou/homeservice-backend/internal/config"
+)
 
 func New(cfg config.Config) Service {
 	switch cfg.StorageBackend {
-	case "local":
+	case "r2":
+		r2, err := NewR2(cfg)
+		if err != nil {
+			log.Fatalf("failed to init R2: %v", err)
+		}
+		return r2
+	default:
 		return NewLocal(cfg)
-		// case "s3": // ไว้ค่อยเพิ่ม หากต้องการ Presign S3
-		//  if s3, err := NewS3(cfg); err == nil { return s3 }
 	}
-	return NewLocal(cfg) // fallback local
 }

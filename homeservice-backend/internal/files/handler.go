@@ -2,15 +2,15 @@ package files
 
 import (
 	"encoding/json"
+	"errors"
 	"mime"
 	"net/http"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/iMookatayou/homeservice-backend/internal/auth"
-	"github.com/iMookatayou/homeservice-backend/internal/httputil"
+	"github.com/iMookatayou/homeservice-backend/internal/httpx"
 	"github.com/iMookatayou/homeservice-backend/internal/storage"
 )
 
@@ -21,172 +21,141 @@ type Handler struct {
 }
 
 func (h Handler) RegisterRoutes(r chi.Router) {
-	// local upload
-	r.Post("/uploads", h.UploadLocal)
-	r.Post("/uploads/presign", h.Presign)
-	r.Post("/uploads/confirm", h.Confirm)
-
-	r.Get("/files/{id}", h.Get)
-	r.Delete("/files/{id}", h.Delete)
+	r.Post("/uploads", h.upload)
+	r.Post("/uploads/presign", h.presign)
+	r.Get("/files/{id}", h.getFile)
+	r.Delete("/files/{id}", h.deleteFile)
 }
 
-func (h Handler) Routes(secret string) http.Handler {
-	r := chi.NewRouter()
-	r.Use(auth.RequireAuth(secret, auth.NewClaims))
-	h.RegisterRoutes(r)
-	return r
-}
-
-func (h Handler) UploadLocal(w http.ResponseWriter, r *http.Request) {
-	uid, _ := auth.UserIDFrom(r)
-
-	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		httputil.Error(w, http.StatusBadRequest, "BAD_REQUEST", err.Error(), "")
+func (h Handler) upload(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserIDFrom(r)
+	if !ok {
+		httpx.JSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
+
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "invalid form"})
+		return
+	}
+
 	file, header, err := r.FormFile("file")
 	if err != nil {
-		httputil.Error(w, http.StatusBadRequest, "BAD_REQUEST", "missing file", "")
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "missing file"})
 		return
 	}
 	defer file.Close()
 
-	//MIME resolve
 	mtype := header.Header.Get("Content-Type")
 	if mtype == "" {
-		mtype = mime.TypeByExtension(filepath.Ext(header.Filename)) 
+		mtype = mime.TypeByExtension(filepath.Ext(header.Filename))
 	}
-	if !allowMIME(mtype) {
-		httputil.Error(w, http.StatusBadRequest, "BAD_REQUEST", "unsupported mimetype", "")
+	if !allowedMIME(mtype) {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "unsupported file type"})
+		return
+	}
+	if header.Size > 25<<20 {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "file too large (max 25MB)"})
 		return
 	}
 
-	//Size resolve
-	size := header.Size
-	if size <= 0 {
-		if v := r.FormValue("size"); v != "" {
-			if n, _ := strconv.ParseInt(v, 10, 64); n > 0 {
-				size = n
-			}
-		}
-	}
-	if size <= 0 || size > (25<<20) { // 25MB
-		httputil.Error(w, http.StatusBadRequest, "BAD_REQUEST", "invalid file size", "")
-		return
-	}
-
-	// --- Save to storage (local) ---
-	put, err := h.Storage.Save(r.Context(), uid, file, header.Filename, mtype, size)
+	result, err := h.Storage.Save(r.Context(), uid, file, header.Filename, mtype, header.Size)
 	if err != nil {
-		httputil.Error(w, http.StatusBadGateway, "UPLOAD_FAILED", err.Error(), "")
-		return
-	}
-
-	// --- Record (ใช้เฉพาะฟิลด์ที่มีใน type File เดิม) ---
-	rec := &File{
-		OwnerID:    uid,
-		Filename:   put.Filename,
-		MIME:       mtype,
-		Size:       put.Size,
-		StorageURL: put.URL,
-	}
-
-	if err := h.Repo.Create(r.Context(), rec); err != nil {
-		httputil.Error(w, http.StatusInternalServerError, "INTERNAL", err.Error(), "")
-		return
-	}
-	httputil.Created(w, rec)
-}
-
-func (h Handler) Presign(w http.ResponseWriter, r *http.Request) {
-	uid, _ := auth.UserIDFrom(r)
-	_ = uid
-
-	var payload struct {
-		Filename string `json:"filename"`
-		MIME     string `json:"mimetype"`
-		Size     int64  `json:"size"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		httputil.Error(w, http.StatusBadRequest, "BAD_REQUEST", err.Error(), "")
-		return
-	}
-	if payload.Filename == "" || payload.MIME == "" || payload.Size <= 0 {
-		httputil.Error(w, http.StatusBadRequest, "BAD_REQUEST", "missing filename/mimetype/size", "")
-		return
-	}
-	if !allowMIME(payload.MIME) {
-		httputil.Error(w, http.StatusBadRequest, "BAD_REQUEST", "invalid mimetype", "")
-		return
-	}
-	// local backend ไม่รองรับ presign
-	httputil.Error(w, http.StatusNotImplemented, "NOT_SUPPORTED", "presign not supported for local storage", "")
-}
-
-func (h Handler) Confirm(w http.ResponseWriter, r *http.Request) {
-	uid, _ := auth.UserIDFrom(r)
-
-	var payload struct {
-		Filename string `json:"filename"`
-		MIME     string `json:"mimetype"`
-		Size     int64  `json:"size"`
-		URL      string `json:"url"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		httputil.Error(w, http.StatusBadRequest, "BAD_REQUEST", err.Error(), "")
-		return
-	}
-	if payload.URL == "" || payload.Filename == "" || payload.MIME == "" || payload.Size <= 0 {
-		httputil.Error(w, http.StatusBadRequest, "BAD_REQUEST", "missing fields", "")
-		return
-	}
-	if !allowMIME(payload.MIME) {
-		httputil.Error(w, http.StatusBadRequest, "BAD_REQUEST", "invalid mimetype", "")
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": "upload failed"})
 		return
 	}
 
 	rec := &File{
-		OwnerID:    uid,
-		Filename:   payload.Filename,
-		MIME:       payload.MIME,
-		Size:       payload.Size,
-		StorageURL: payload.URL,
+		OwnerID:  uid,
+		Filename: result.Filename,
+		MIME:     mtype,
+		Size:     result.Size,
+		URL:      result.URL,
 	}
 	if err := h.Repo.Create(r.Context(), rec); err != nil {
-		httputil.Error(w, http.StatusInternalServerError, "INTERNAL", err.Error(), "")
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	httputil.Created(w, rec)
+	httpx.JSON(w, http.StatusCreated, rec)
 }
 
-func (h Handler) Get(w http.ResponseWriter, r *http.Request) {
+func (h Handler) presign(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserIDFrom(r)
+	if !ok {
+		httpx.JSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	var p struct {
+		Filename string `json:"filename"`
+		MIME     string `json:"mime"`
+		Size     int64  `json:"size"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
+		return
+	}
+	if p.Filename == "" || p.MIME == "" || p.Size <= 0 {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "filename, mime, size are required"})
+		return
+	}
+	if !allowedMIME(p.MIME) {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "unsupported file type"})
+		return
+	}
+
+	presign, err := h.Storage.PresignPut(r.Context(), uid, p.Filename, p.MIME, p.Size)
+	if err != nil {
+		if errors.Is(err, storage.ErrNotSupported) {
+			httpx.JSON(w, http.StatusNotImplemented, map[string]string{"error": "presign not supported"})
+			return
+		}
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	httpx.JSON(w, http.StatusOK, presign)
+}
+
+func (h Handler) getFile(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	f, err := h.Repo.Get(r.Context(), id)
 	if err != nil {
-		httputil.Error(w, http.StatusNotFound, "NOT_FOUND", "file not found", "")
+		if errors.Is(err, ErrNotFound) {
+			httpx.JSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+			return
+		}
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	httputil.OK(w, f)
+	httpx.JSON(w, http.StatusOK, f)
 }
 
-func (h Handler) Delete(w http.ResponseWriter, r *http.Request) {
-	uid, _ := auth.UserIDFrom(r)
+func (h Handler) deleteFile(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserIDFrom(r)
+	if !ok {
+		httpx.JSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
 	id := chi.URLParam(r, "id")
 	if err := h.Repo.Delete(r.Context(), uid, id); err != nil {
-		httputil.Error(w, http.StatusNotFound, "NOT_FOUND", "file not found or not owner", "")
+		if errors.Is(err, ErrNotFound) {
+			httpx.JSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+			return
+		}
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	httputil.OK(w, map[string]string{"deleted": id})
+	w.WriteHeader(http.StatusNoContent)
 }
 
-func allowMIME(m string) bool {
+func allowedMIME(m string) bool {
 	if m == "" {
 		return false
 	}
 	if strings.HasPrefix(m, "image/") {
 		return true
 	}
-	if m == "video/mp4" {
+	if m == "video/mp4" || m == "application/pdf" {
 		return true
 	}
 	return false

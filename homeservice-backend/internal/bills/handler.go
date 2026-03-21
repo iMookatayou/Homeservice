@@ -1,15 +1,13 @@
 package bills
 
 import (
+	"encoding/json"
+	"errors"
 	"net/http"
-	"time"
 
 	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/render"
-	"github.com/google/uuid"
-
-	// ปรับ import ให้ตรงกับโมดูล auth ของคุณ
 	"github.com/iMookatayou/homeservice-backend/internal/auth"
+	"github.com/iMookatayou/homeservice-backend/internal/httpx"
 )
 
 type Handler struct {
@@ -17,65 +15,109 @@ type Handler struct {
 }
 
 func (h Handler) RegisterRoutes(r chi.Router) {
-	r.Post("/bills", h.createBill)
-	r.Get("/bills", h.listBills)
+	r.Get("/bills", h.list)
+	r.Post("/bills", h.create)
 	r.Get("/bills/summary", h.summary)
+	r.Get("/bills/{id}", h.getByID)
+	r.Patch("/bills/{id}", h.update)
+	r.Delete("/bills/{id}", h.delete)
+	r.Post("/bills/{id}/pay", h.markPaid)
 }
 
-func (h Handler) createBill(w http.ResponseWriter, r *http.Request) {
-	var req Bill
-	if err := render.DecodeJSON(r.Body, &req); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	now := time.Now()
-	req.ID = uuid.New()
-	req.CreatedAt = now
-	req.UpdatedAt = now
-
-	userIDStr, ok := auth.UserIDFrom(r)
-	if !ok {
-		http.Error(w, "unauthenticated", http.StatusUnauthorized)
-		return
-	}
-
-	userUUID, err := uuid.Parse(userIDStr)
+func (h Handler) list(w http.ResponseWriter, r *http.Request) {
+	p := httpx.ParsePagination(r)
+	list, err := h.Svc.ListBills(r.Context(), p.Limit, p.Offset)
 	if err != nil {
-		http.Error(w, "invalid user ID", http.StatusBadRequest)
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	req.CreatedBy = userUUID
+	httpx.Paginate(w, list, p)
+}
 
-	if req.Status == "paid" {
-		if req.PaidAt == nil {
-			t := now
-			req.PaidAt = &t
+func (h Handler) getByID(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	bill, err := h.Svc.GetBill(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			httpx.JSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+			return
 		}
-	} else {
-		req.PaidAt = nil
-	}
-
-	if err := h.Svc.CreateBill(r.Context(), &req); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	render.JSON(w, r, req)
+	httpx.JSON(w, http.StatusOK, bill)
 }
 
-func (h Handler) listBills(w http.ResponseWriter, r *http.Request) {
-	list, err := h.Svc.ListBills(r.Context())
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+func (h Handler) create(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.UserIDFrom(r)
+	if !ok {
+		httpx.JSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
 		return
 	}
-	render.JSON(w, r, list)
+	var p CreateBillPayload
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
+		return
+	}
+	bill, err := h.Svc.CreateBill(r.Context(), userID, p)
+	if err != nil {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	httpx.JSON(w, http.StatusCreated, bill)
+}
+
+func (h Handler) update(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var p UpdateBillPayload
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
+		return
+	}
+	bill, err := h.Svc.UpdateBill(r.Context(), id, p)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			httpx.JSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+			return
+		}
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	httpx.JSON(w, http.StatusOK, bill)
+}
+
+func (h Handler) delete(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if err := h.Svc.DeleteBill(r.Context(), id); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			httpx.JSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+			return
+		}
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h Handler) markPaid(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	bill, err := h.Svc.MarkPaid(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			httpx.JSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+			return
+		}
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	httpx.JSON(w, http.StatusOK, bill)
 }
 
 func (h Handler) summary(w http.ResponseWriter, r *http.Request) {
 	res, err := h.Svc.Summarize(r.Context())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	render.JSON(w, r, res)
+	httpx.JSON(w, http.StatusOK, res)
 }

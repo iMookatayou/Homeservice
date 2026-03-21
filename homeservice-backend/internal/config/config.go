@@ -12,9 +12,16 @@ type Config struct {
 	JWTSecret  string
 	CorsOrigin string
 
-	StorageBackend string // "local" | "s3"
-	LocalDir       string // โฟลเดอร์เก็บไฟล์กรณี local
-	PublicBaseURL  string // URL เอาไว้โหลดไฟล์กลับไป เช่น /static/*
+	StorageBackend string
+	LocalDir       string
+	PublicBaseURL  string
+
+	// Cloudflare R2
+	R2AccountID string
+	R2AccessKey string
+	R2SecretKey string
+	R2Bucket    string
+	R2PublicURL string
 }
 
 func Getenv(key, def string) string {
@@ -46,6 +53,12 @@ func Load() Config {
 		StorageBackend: Getenv("STORAGE_BACKEND", "local"),
 		LocalDir:       Getenv("LOCAL_STORAGE_DIR", "./data/uploads"),
 		PublicBaseURL:  Getenv("PUBLIC_BASE_URL", "http://localhost:8080/static"),
+
+		R2AccountID: Getenv("R2_ACCOUNT_ID", ""),
+		R2AccessKey: Getenv("R2_ACCESS_KEY_ID", ""),
+		R2SecretKey: Getenv("R2_SECRET_ACCESS_KEY", ""),
+		R2Bucket:    Getenv("R2_BUCKET", ""),
+		R2PublicURL: Getenv("R2_PUBLIC_URL", ""),
 	}
 
 	if c.JWTSecret == "change-me" {

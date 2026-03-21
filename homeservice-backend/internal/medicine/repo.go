@@ -1,72 +1,64 @@
-// internal/medicine/repo.go
 package medicine
 
 import (
 	"context"
-	"fmt"
+	"errors"
 	"time"
 
-	"github.com/iMookatayou/homeservice-backend/internal/db"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// Repo interface PostgreSQL
-type Repo interface {
-	CreateItem(ctx context.Context, it *MedicineItem) error
-	GetItem(ctx context.Context, householdID, itemID string) (*MedicineItem, error)
-	ListItems(ctx context.Context, householdID string, f ListItemFilter) ([]ItemSummary, error)
-	UpdateItem(ctx context.Context, it *MedicineItem) error
-	ArchiveItem(ctx context.Context, householdID, itemID string) error
-
-	CreateBatch(ctx context.Context, b *MedicineBatch) error
-	GetBatchesByItem(ctx context.Context, itemID string) ([]MedicineBatch, error)
-
-	CreateTxn(ctx context.Context, t *MedicineTxn) error
-	ApplyTxnAdjustQty(ctx context.Context, t *MedicineTxn) error
-
-	CreateLocation(ctx context.Context, loc *MedicineLocation) error
-	ListLocations(ctx context.Context, householdID string) ([]MedicineLocation, error)
-
-	UpsertAlert(ctx context.Context, a *MedicineAlert) error
-	GetAlert(ctx context.Context, itemID string) (*MedicineAlert, error)
+type Repo struct {
+	DB *pgxpool.Pool
 }
 
-type pgRepo struct {
-	db *db.Pool
+func NewRepo(db *pgxpool.Pool) *Repo {
+	return &Repo{DB: db}
 }
 
-func NewPGRepo(pool *db.Pool) Repo {
-	return &pgRepo{db: pool}
+// Items
+func (r *Repo) List(ctx context.Context, f ListItemFilter) ([]MedicineItem, error) {
+	rows, err := r.DB.Query(ctx, `
+		SELECT id, name, form, unit, category, stock_qty, expiry_date, location, note, created_at, updated_at
+		FROM medicine_items
+		ORDER BY name ASC
+		LIMIT $1 OFFSET $2
+	`, f.Limit, f.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []MedicineItem
+	for rows.Next() {
+		var it MedicineItem
+		if err := rows.Scan(
+			&it.ID, &it.Name, &it.Form, &it.Unit, &it.Category,
+			&it.StockQty, &it.ExpiryDate, &it.Location, &it.Note,
+			&it.CreatedAt, &it.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, it)
+	}
+	return items, rows.Err()
 }
 
-// ---------- Items ----------
-
-func (r *pgRepo) CreateItem(ctx context.Context, it *MedicineItem) error {
-	const q = `
-	INSERT INTO medicine_items 
-	(id, household_id, name, generic_name, form, strength, category, unit, location_id, gtin, photo_file_id, notes, is_archived)
-	VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,false)`
-	_, err := r.db.Exec(ctx, q,
-		it.ID, it.HouseholdID, it.Name, it.GenericName, it.Form, it.Strength,
-		it.Category, it.Unit, it.LocationID, it.GTIN, it.PhotoFileID, it.Notes)
-	return err
-}
-
-func (r *pgRepo) GetItem(ctx context.Context, householdID, itemID string) (*MedicineItem, error) {
-	const q = `
-	SELECT id, household_id, name, generic_name, form, strength, category, unit,
-	       location_id, gtin, photo_file_id, notes, is_archived, created_at, updated_at
-	FROM medicine_items
-	WHERE id=$1 AND household_id=$2 AND is_archived=false`
-	row := r.db.QueryRow(ctx, q, itemID, householdID)
+func (r *Repo) GetByID(ctx context.Context, id string) (*MedicineItem, error) {
+	row := r.DB.QueryRow(ctx, `
+		SELECT id, name, form, unit, category, stock_qty, expiry_date, location, note, created_at, updated_at
+		FROM medicine_items
+		WHERE id = $1
+	`, id)
 
 	var it MedicineItem
 	if err := row.Scan(
-		&it.ID, &it.HouseholdID, &it.Name, &it.GenericName, &it.Form, &it.Strength,
-		&it.Category, &it.Unit, &it.LocationID, &it.GTIN, &it.PhotoFileID,
-		&it.Notes, &it.IsArchived, &it.CreatedAt, &it.UpdatedAt,
+		&it.ID, &it.Name, &it.Form, &it.Unit, &it.Category,
+		&it.StockQty, &it.ExpiryDate, &it.Location, &it.Note,
+		&it.CreatedAt, &it.UpdatedAt,
 	); err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
 		}
 		return nil, err
@@ -74,50 +66,63 @@ func (r *pgRepo) GetItem(ctx context.Context, householdID, itemID string) (*Medi
 	return &it, nil
 }
 
-func (r *pgRepo) ListItems(ctx context.Context, householdID string, f ListItemFilter) ([]ItemSummary, error) {
-	q := `
-	SELECT i.id, i.household_id, i.name, i.generic_name, i.form, i.strength, i.category,
-	       i.unit, i.location_id, i.gtin, i.photo_file_id, i.notes, i.is_archived,
-	       i.created_at, i.updated_at,
-	       COALESCE(s.total_qty,0), ne.next_expiry
-	FROM medicine_items i
-	LEFT JOIN v_medicine_item_stock s ON s.item_id=i.id
-	LEFT JOIN v_medicine_item_next_expiry ne ON ne.item_id=i.id
-	WHERE i.household_id=$1 AND i.is_archived=false
-	ORDER BY i.name`
+func (r *Repo) Create(ctx context.Context, it *MedicineItem) error {
+	return r.DB.QueryRow(ctx, `
+		INSERT INTO medicine_items (name, form, unit, category, stock_qty, expiry_date, location, note)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, created_at, updated_at
+	`, it.Name, it.Form, it.Unit, it.Category, it.StockQty, it.ExpiryDate, it.Location, it.Note).
+		Scan(&it.ID, &it.CreatedAt, &it.UpdatedAt)
+}
 
-	rows, err := r.db.Query(ctx, q, householdID)
+func (r *Repo) Update(ctx context.Context, id string, p UpdateItemPayload) (*MedicineItem, error) {
+	it, err := r.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	var items []ItemSummary
-	for rows.Next() {
-		var it MedicineItem
-		var total float64
-		var nextExpiry *time.Time
-		if err := rows.Scan(
-			&it.ID, &it.HouseholdID, &it.Name, &it.GenericName, &it.Form, &it.Strength,
-			&it.Category, &it.Unit, &it.LocationID, &it.GTIN, &it.PhotoFileID, &it.Notes,
-			&it.IsArchived, &it.CreatedAt, &it.UpdatedAt, &total, &nextExpiry,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, ItemSummary{Item: it, TotalQty: total, NextExpiry: nextExpiry})
+	if p.Name != nil {
+		it.Name = *p.Name
 	}
-	return items, rows.Err()
+	if p.Form != nil {
+		it.Form = p.Form
+	}
+	if p.Unit != nil {
+		it.Unit = p.Unit
+	}
+	if p.Category != nil {
+		it.Category = p.Category
+	}
+	if p.StockQty != nil {
+		it.StockQty = *p.StockQty
+	}
+	if p.ExpiryDate != nil {
+		it.ExpiryDate = p.ExpiryDate
+	}
+	if p.Location != nil {
+		it.Location = p.Location
+	}
+	if p.Note != nil {
+		it.Note = p.Note
+	}
+
+	err = r.DB.QueryRow(ctx, `
+		UPDATE medicine_items
+		SET name=$1, form=$2, unit=$3, category=$4, stock_qty=$5,
+		    expiry_date=$6, location=$7, note=$8, updated_at=now()
+		WHERE id=$9
+		RETURNING updated_at
+	`, it.Name, it.Form, it.Unit, it.Category, it.StockQty,
+		it.ExpiryDate, it.Location, it.Note, id).
+		Scan(&it.UpdatedAt)
+	if err != nil {
+		return nil, err
+	}
+	return it, nil
 }
 
-func (r *pgRepo) UpdateItem(ctx context.Context, it *MedicineItem) error {
-	const q = `
-	UPDATE medicine_items
-	SET name=$1, generic_name=$2, form=$3, strength=$4, category=$5, location_id=$6,
-	    gtin=$7, photo_file_id=$8, notes=$9, updated_at=now()
-	WHERE id=$10 AND household_id=$11`
-	ct, err := r.db.Exec(ctx, q,
-		it.Name, it.GenericName, it.Form, it.Strength, it.Category, it.LocationID,
-		it.GTIN, it.PhotoFileID, it.Notes, it.ID, it.HouseholdID)
+func (r *Repo) Delete(ctx context.Context, id string) error {
+	ct, err := r.DB.Exec(ctx, `DELETE FROM medicine_items WHERE id=$1`, id)
 	if err != nil {
 		return err
 	}
@@ -127,177 +132,170 @@ func (r *pgRepo) UpdateItem(ctx context.Context, it *MedicineItem) error {
 	return nil
 }
 
-func (r *pgRepo) ArchiveItem(ctx context.Context, householdID, itemID string) error {
-	const q = `UPDATE medicine_items SET is_archived=true, updated_at=now() WHERE id=$1 AND household_id=$2`
-	ct, err := r.db.Exec(ctx, q, itemID, householdID)
-	if err != nil {
-		return err
-	}
-	if ct.RowsAffected() == 0 {
-		return ErrNotFound
-	}
-	return nil
-}
-
-// ---------- Batches ----------
-
-func (r *pgRepo) CreateBatch(ctx context.Context, b *MedicineBatch) error {
-	const q = `
-	INSERT INTO medicine_batches (id, item_id, lot_no, expiry_date, qty, unit)
-	VALUES ($1,$2,$3,$4,$5,$6)`
-	_, err := r.db.Exec(ctx, q, b.ID, b.ItemID, b.LotNo, b.Expiry, b.Qty, b.Unit)
-	return err
-}
-
-func (r *pgRepo) GetBatchesByItem(ctx context.Context, itemID string) ([]MedicineBatch, error) {
-	const q = `
-	SELECT id, item_id, lot_no, expiry_date, qty, unit, created_at, updated_at
-	FROM medicine_batches
-	WHERE item_id=$1
-	ORDER BY expiry_date NULLS LAST, created_at`
-	rows, err := r.db.Query(ctx, q, itemID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var batches []MedicineBatch
-	for rows.Next() {
-		var b MedicineBatch
-		if err := rows.Scan(&b.ID, &b.ItemID, &b.LotNo, &b.Expiry, &b.Qty, &b.Unit, &b.CreatedAt, &b.UpdatedAt); err != nil {
-			return nil, err
-		}
-		batches = append(batches, b)
-	}
-	return batches, rows.Err()
-}
-
-// ---------- Txn ----------
-
-func (r *pgRepo) CreateTxn(ctx context.Context, t *MedicineTxn) error {
-	const q = `
-	INSERT INTO medicine_txns (id, item_id, batch_id, actor_user_id, type, qty_change, reason)
-	VALUES ($1,$2,$3,$4,$5,$6,$7)`
-	_, err := r.db.Exec(ctx, q, t.ID, t.ItemID, t.BatchID, t.ActorID, t.Type, t.QtyChange, t.Reason)
-	return err
-}
-
-func (r *pgRepo) ApplyTxnAdjustQty(ctx context.Context, t *MedicineTxn) error {
-	tx, err := r.db.Begin(ctx)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-
-	switch t.Type {
-	case TxnIn:
-		if t.BatchID == nil {
-			return fmt.Errorf("batch_id required for IN")
-		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE medicine_batches SET qty=qty+$1, updated_at=now() WHERE id=$2`,
-			t.QtyChange, *t.BatchID,
-		); err != nil {
-			return err
-		}
-
-	case TxnOut, TxnAdjust:
-		if t.BatchID == nil {
-			return fmt.Errorf("batch_id required for OUT/ADJUST")
-		}
-		row := tx.QueryRow(ctx, `SELECT qty FROM medicine_batches WHERE id=$1 FOR UPDATE`, *t.BatchID)
-		var qty float64
-		if err := row.Scan(&qty); err != nil {
-			return err
-		}
-		newQty := qty + t.QtyChange
-		if newQty < 0 {
-			return ErrNoStock
-		}
-		if _, err := tx.Exec(ctx,
-			`UPDATE medicine_batches SET qty=$1, updated_at=now() WHERE id=$2`,
-			newQty, *t.BatchID,
-		); err != nil {
-			return err
-		}
-
-	default:
-		return ErrBadInput
-	}
-
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO medicine_txns (id, item_id, batch_id, actor_user_id, type, qty_change, reason)
-		VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-		t.ID, t.ItemID, t.BatchID, t.ActorID, t.Type, t.QtyChange, t.Reason,
-	); err != nil {
-		return err
-	}
-
-	return tx.Commit(ctx)
-}
-
-// ---------- Locations ----------
-
-func (r *pgRepo) CreateLocation(ctx context.Context, loc *MedicineLocation) error {
-	const q = `
-	INSERT INTO medicine_locations (id, household_id, name, notes, is_active)
-	VALUES ($1,$2,$3,$4,true)`
-	_, err := r.db.Exec(ctx, q, loc.ID, loc.HouseholdID, loc.Name, loc.Notes)
-	return err
-}
-
-func (r *pgRepo) ListLocations(ctx context.Context, householdID string) ([]MedicineLocation, error) {
-	const q = `
-	SELECT id, household_id, name, notes, is_active, created_at, updated_at
-	FROM medicine_locations
-	WHERE household_id=$1 AND is_active=true
-	ORDER BY name`
-	rows, err := r.db.Query(ctx, q, householdID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var out []MedicineLocation
-	for rows.Next() {
-		var l MedicineLocation
-		if err := rows.Scan(&l.ID, &l.HouseholdID, &l.Name, &l.Notes, &l.IsActive, &l.CreatedAt, &l.UpdatedAt); err != nil {
-			return nil, err
-		}
-		out = append(out, l)
-	}
-	return out, rows.Err()
-}
-
-// ---------- Alerts ----------
-
-func (r *pgRepo) UpsertAlert(ctx context.Context, a *MedicineAlert) error {
-	const q = `
-	INSERT INTO medicine_alerts (item_id, min_qty, expiry_window_days, is_enabled, updated_at)
-	VALUES ($1,$2,$3,$4,now())
-	ON CONFLICT (item_id)
-	DO UPDATE SET 
-		min_qty=EXCLUDED.min_qty,
-		expiry_window_days=EXCLUDED.expiry_window_days,
-		is_enabled=EXCLUDED.is_enabled,
-		updated_at=now()`
-	_, err := r.db.Exec(ctx, q, a.ItemID, a.MinQty, a.ExpiryWindowDays, a.IsEnabled)
-	return err
-}
-
-func (r *pgRepo) GetAlert(ctx context.Context, itemID string) (*MedicineAlert, error) {
-	const q = `
-	SELECT item_id, min_qty, expiry_window_days, is_enabled, updated_at
-	FROM medicine_alerts
-	WHERE item_id=$1`
-	row := r.db.QueryRow(ctx, q, itemID)
+// Alerts
+func (r *Repo) GetAlert(ctx context.Context, itemID string) (*MedicineAlert, error) {
+	row := r.DB.QueryRow(ctx, `
+		SELECT id, item_id, min_qty, expiry_window_days, is_enabled
+		FROM medicine_alerts
+		WHERE item_id = $1
+	`, itemID)
 
 	var a MedicineAlert
-	if err := row.Scan(&a.ItemID, &a.MinQty, &a.ExpiryWindowDays, &a.IsEnabled, &a.UpdatedAt); err != nil {
-		if err == pgx.ErrNoRows {
+	if err := row.Scan(&a.ID, &a.ItemID, &a.MinQty, &a.ExpiryWindowDays, &a.IsEnabled); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, err
 	}
 	return &a, nil
+}
+
+func (r *Repo) UpsertAlert(ctx context.Context, a *MedicineAlert) error {
+	return r.DB.QueryRow(ctx, `
+		INSERT INTO medicine_alerts (item_id, min_qty, expiry_window_days, is_enabled)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (item_id) DO UPDATE
+		SET min_qty=$2, expiry_window_days=$3, is_enabled=$4
+		RETURNING id
+	`, a.ItemID, a.MinQty, a.ExpiryWindowDays, a.IsEnabled).Scan(&a.ID)
+}
+
+// Low stock check
+func (r *Repo) ListLowStock(ctx context.Context) ([]MedicineItem, error) {
+	rows, err := r.DB.Query(ctx, `
+		SELECT i.id, i.name, i.form, i.unit, i.category, i.stock_qty, 
+		       i.expiry_date, i.location, i.note, i.created_at, i.updated_at
+		FROM medicine_items i
+		JOIN medicine_alerts a ON a.item_id = i.id
+		WHERE a.is_enabled = true
+		  AND a.min_qty IS NOT NULL
+		  AND i.stock_qty <= a.min_qty
+		ORDER BY i.stock_qty ASC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []MedicineItem
+	for rows.Next() {
+		var it MedicineItem
+		if err := rows.Scan(
+			&it.ID, &it.Name, &it.Form, &it.Unit, &it.Category,
+			&it.StockQty, &it.ExpiryDate, &it.Location, &it.Note,
+			&it.CreatedAt, &it.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, it)
+	}
+	return items, rows.Err()
+}
+
+// Expiring soon check
+func (r *Repo) ListExpiringSoon(ctx context.Context) ([]MedicineItem, error) {
+	rows, err := r.DB.Query(ctx, `
+		SELECT i.id, i.name, i.form, i.unit, i.category, i.stock_qty,
+		       i.expiry_date, i.location, i.note, i.created_at, i.updated_at
+		FROM medicine_items i
+		JOIN medicine_alerts a ON a.item_id = i.id
+		WHERE a.is_enabled = true
+		  AND a.expiry_window_days IS NOT NULL
+		  AND i.expiry_date IS NOT NULL
+		  AND i.expiry_date <= now() + (a.expiry_window_days || ' days')::interval
+		ORDER BY i.expiry_date ASC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []MedicineItem
+	for rows.Next() {
+		var it MedicineItem
+		if err := rows.Scan(
+			&it.ID, &it.Name, &it.Form, &it.Unit, &it.Category,
+			&it.StockQty, &it.ExpiryDate, &it.Location, &it.Note,
+			&it.CreatedAt, &it.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, it)
+	}
+	return items, rows.Err()
+}
+
+// Stock adjustment
+func (r *Repo) AdjustStock(ctx context.Context, id string, delta float64) (*MedicineItem, error) {
+	row := r.DB.QueryRow(ctx, `
+		UPDATE medicine_items
+		SET stock_qty = stock_qty + $1, updated_at = now()
+		WHERE id = $2
+		RETURNING id, name, form, unit, category, stock_qty, expiry_date, location, note, created_at, updated_at
+	`, delta, id)
+
+	var it MedicineItem
+	if err := row.Scan(
+		&it.ID, &it.Name, &it.Form, &it.Unit, &it.Category,
+		&it.StockQty, &it.ExpiryDate, &it.Location, &it.Note,
+		&it.CreatedAt, &it.UpdatedAt,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &it, nil
+}
+
+// Expire check
+func (r *Repo) ListExpired(ctx context.Context) ([]MedicineItem, error) {
+	rows, err := r.DB.Query(ctx, `
+		SELECT id, name, form, unit, category, stock_qty, expiry_date, location, note, created_at, updated_at
+		FROM medicine_items
+		WHERE expiry_date IS NOT NULL
+		  AND expiry_date < now()
+		ORDER BY expiry_date ASC
+	`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []MedicineItem
+	for rows.Next() {
+		var it MedicineItem
+		if err := rows.Scan(
+			&it.ID, &it.Name, &it.Form, &it.Unit, &it.Category,
+			&it.StockQty, &it.ExpiryDate, &it.Location, &it.Note,
+			&it.CreatedAt, &it.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, it)
+	}
+	return items, rows.Err()
+}
+
+// UpdateExpiry
+func (r *Repo) UpdateExpiry(ctx context.Context, id string, expiry *time.Time) (*MedicineItem, error) {
+	row := r.DB.QueryRow(ctx, `
+		UPDATE medicine_items
+		SET expiry_date = $1, updated_at = now()
+		WHERE id = $2
+		RETURNING id, name, form, unit, category, stock_qty, expiry_date, location, note, created_at, updated_at
+	`, expiry, id)
+
+	var it MedicineItem
+	if err := row.Scan(
+		&it.ID, &it.Name, &it.Form, &it.Unit, &it.Category,
+		&it.StockQty, &it.ExpiryDate, &it.Location, &it.Note,
+		&it.CreatedAt, &it.UpdatedAt,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return &it, nil
 }
