@@ -4,119 +4,41 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:riverpod/riverpod.dart'
-    show ProviderObserver, ProviderObserverContext;
 
 import 'router.dart';
 import 'state/auth_state.dart';
 
-final class RiverpodLogger extends ProviderObserver {
-  const RiverpodLogger();
-
-  @override
-  void didAddProvider(ProviderObserverContext context, Object? value) {
-    debugPrint('[riverpod:add] ${context.provider} -> $value');
-  }
-
-  @override
-  void didUpdateProvider(
-    ProviderObserverContext context,
-    Object? previousValue,
-    Object? newValue,
-  ) {
-    debugPrint(
-      '[riverpod:update] ${context.provider} $previousValue -> $newValue',
-    );
-  }
-
-  @override
-  void didDisposeProvider(ProviderObserverContext context) {
-    debugPrint('[riverpod:dispose] ${context.provider}');
-  }
-
-  @override
-  void providerFailed(
-    ProviderObserverContext context,
-    Object error,
-    StackTrace stackTrace,
-  ) {
-    debugPrint(
-      '🛑 [riverpod:error] ${context.provider} -> $error\n$stackTrace',
-    );
-  }
-}
-
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  assert(() {
-    BindingBase.debugZoneErrorsAreFatal = true;
-    return true;
-  }());
-
   FlutterError.onError = (FlutterErrorDetails details) {
     FlutterError.dumpErrorToConsole(details);
-    debugPrint('🛑 [flutter] ${details.exception}\n${details.stack}');
+    if (kDebugMode) debugPrint('🛑 [flutter] ${details.exception}');
   };
+
   PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
-    debugPrint('🛑 [platform] $error\n$stack');
+    if (kDebugMode) debugPrint('🛑 [platform] $error');
     return true;
-  };
-  ErrorWidget.builder = (FlutterErrorDetails details) {
-    debugPrint('🧱 [error-widget] ${details.exception}\n${details.stack}');
-    return Material(
-      color: Colors.white,
-      child: Center(
-        child: Text(
-          'Widget Error:\n${details.exception}',
-          textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.red, fontSize: 14),
-        ),
-      ),
-    );
   };
 
   try {
-    await dotenv.load(fileName: ".env.development");
-    debugPrint('✅ dotenv loaded: .env.development');
-  } catch (e1) {
-    debugPrint("⚠️ dotenv load failed (.env.development): $e1");
-    try {
-      await dotenv.load(fileName: ".env");
-      debugPrint('✅ dotenv loaded: .env');
-    } catch (e2) {
-      debugPrint("⚠️ dotenv load failed (.env): $e2");
-    }
+    await dotenv.load(fileName: '.env.development');
+    if (kDebugMode) debugPrint('✅ dotenv loaded');
+  } catch (e) {
+    if (kDebugMode) debugPrint('⚠️ dotenv load failed: $e');
   }
 
-  runApp(
-    const ProviderScope(observers: [RiverpodLogger()], child: HomeServiceApp()),
-  );
-
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    debugPrint('[boot] first frame rendered');
-  });
-  Future.delayed(const Duration(seconds: 3), () {
-  });
-
-  SchedulerBinding.instance.addTimingsCallback((timings) {
-    for (final t in timings) {
-      final b = t.buildDuration.inMilliseconds;
-      final r = t.rasterDuration.inMilliseconds;
-      if (b > 32 || r > 32) {
-        debugPrint('🐢 [frame] build=${b}ms raster=${r}ms');
-      }
-    }
-  });
-    
   Isolate.current.addErrorListener(
     RawReceivePort((dynamic pair) {
       final List<dynamic> errorAndStack = pair as List<dynamic>;
-      debugPrint('🧨 [isolate] ${errorAndStack.first}\n${errorAndStack.last}');
+      if (kDebugMode) debugPrint('🧨 [isolate] ${errorAndStack.first}');
     }).sendPort,
+  );
+
+  runApp(
+    const ProviderScope(child: HomeServiceApp()),
   );
 }
 
@@ -149,20 +71,14 @@ class HomeServiceApp extends ConsumerWidget {
       builder: (context, child) {
         final media = MediaQuery.of(context);
         final clampedScale = media.textScaleFactor.clamp(0.9, 1.2);
-        final w = media.size.width;
-        final h = media.size.height;
-        if (w <= 0 || h <= 0) {
-          debugPrint(
-            '⚠️ [layout] invalid size: $w x $h, viewInsets=${media.viewInsets}',
-          );
-        }
         return MediaQuery(
           data: media.copyWith(textScaleFactor: clampedScale),
           child: Directionality(
             textDirection: TextDirection.ltr,
-            child:
-                child ??
-                const Scaffold(body: Center(child: Text('❌ Page not found'))),
+            child: child ??
+                const Scaffold(
+                  body: Center(child: Text('❌ Page not found')),
+                ),
           ),
         );
       },

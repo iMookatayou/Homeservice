@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'state/auth_state.dart';
-
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
@@ -11,29 +10,20 @@ import 'screens/forgot_password_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/notes_screen.dart';
 import 'screens/contractors_screen.dart';
-
-// Purchases
 import 'screens/purchase_screen.dart';
 import 'screens/purchase_detail_screen.dart';
 import 'screens/purchase_form_screen.dart';
-
-// Bills
 import 'screens/bills_screen.dart';
 import 'screens/bill_form_screen.dart';
 import 'screens/bills_summary_screen.dart';
 import 'screens/bill_detail_screen.dart';
 import 'models/bill.dart';
-
-// Medicine
 import 'screens/medicine_screen.dart';
 import 'screens/medicine_form_screen.dart';
 import 'screens/medicine_detail_screen.dart';
-
-// Media
-import 'screens/stock_media_screen.dart';
+import 'screens/stocks_watchlist_screen.dart';
 import 'screens/stock_detail_screen.dart';
 import 'screens/stock_media_screen.dart';
-import 'screens/stocks_watchlist_screen.dart';
 
 class GoRouterRefreshNotifier extends ChangeNotifier {
   GoRouterRefreshNotifier(this.ref) {
@@ -54,43 +44,30 @@ final routerProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: true,
     initialLocation: '/splash',
     refreshListenable: GoRouterRefreshNotifier(ref),
-
     routes: [
       // Public
       GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
-      GoRoute(
-        path: '/forgot',
-        builder: (_, __) => const ForgotPasswordScreen(),
-      ),
-      GoRoute(
-        path: '/forgotpassword',
-        builder: (_, __) => const ForgotPasswordScreen(),
-      ),
+      GoRoute(path: '/forgot', builder: (_, __) => const ForgotPasswordScreen()),
 
       // Private
       GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
       GoRoute(path: '/notes', builder: (_, __) => const NotesScreen()),
-      GoRoute(
-        path: '/contractors',
-        builder: (_, __) => const ContractorsScreen(),
-      ),
+      GoRoute(path: '/contractors', builder: (_, __) => const ContractorsScreen()),
 
-      // Purchases module 
+      // Purchases
       GoRoute(
         path: '/purchases',
         builder: (_, __) => const PurchaseScreen(),
         routes: [
           GoRoute(
             path: 'new',
-            builder: (_, __) =>
-                const PurchaseFormScreen(mode: PurchaseFormMode.create),
+            builder: (_, __) => const PurchaseFormScreen(mode: PurchaseFormMode.create),
           ),
           GoRoute(
             path: ':id',
-            builder: (_, st) =>
-                PurchaseDetailScreen(id: st.pathParameters['id']!),
+            builder: (_, st) => PurchaseDetailScreen(id: st.pathParameters['id']!),
             routes: [
               GoRoute(
                 path: 'edit',
@@ -104,16 +81,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
-      // Bills module
+      // Bills
       GoRoute(
         path: '/bills',
         builder: (_, __) => const BillsScreen(),
         routes: [
           GoRoute(path: 'new', builder: (_, __) => const BillFormScreen()),
-          GoRoute(
-            path: 'summary',
-            builder: (_, __) => const BillsSummaryScreen(),
-          ),
+          GoRoute(path: 'summary', builder: (_, __) => const BillsSummaryScreen()),
           GoRoute(
             path: ':id',
             builder: (_, st) => BillDetailScreen(bill: st.extra as Bill),
@@ -121,7 +95,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
-      // Medicine module
+      // Medicine
       GoRoute(
         path: '/medicine',
         builder: (_, __) => const MedicineScreen(),
@@ -129,12 +103,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(path: 'new', builder: (_, __) => const MedicineFormScreen()),
           GoRoute(
             path: ':id',
-            builder: (_, st) =>
-                MedicineDetailScreen(id: st.pathParameters['id']!),
+            builder: (_, st) => MedicineDetailScreen(id: st.pathParameters['id']!),
           ),
         ],
       ),
-      // Stocks module
+
+      // Stocks
       GoRoute(
         path: '/stocks',
         builder: (_, __) => const StocksWatchlistScreen(),
@@ -162,14 +136,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       final path = s.uri.path;
       final auth = ref.read(authProvider);
 
-      debugPrint(
-        '[router] redirect check path=$path loading=${auth.loading} authed=${auth.isAuthenticated}',
-      );
-
       if (auth.loading) return null;
 
+      const public = {'/login', '/register', '/forgot'};
       final onSplash = path == '/splash';
-      const public = {'/login', '/register', '/forgot', '/forgotpassword'};
 
       if (!auth.isAuthenticated) {
         if (onSplash) return '/login';

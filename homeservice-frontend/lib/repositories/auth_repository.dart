@@ -1,5 +1,5 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
+
 import '../models/user.dart';
 import '../services/api_client.dart';
 import '../services/token_storage.dart';
@@ -9,46 +9,35 @@ class AuthRepository {
   final TokenStorage _storage;
 
   AuthRepository({required TokenStorage storage})
-    : _storage = storage,
-      _api = ApiClient(tokenStorage: storage);
+      : _storage = storage,
+        _api = ApiClient(tokenStorage: storage);
 
-  // === Session helpers ===
   Future<String?> currentToken() => _storage.getAccessToken();
 
-  Future<bool> attachSavedToken() async {
-    final t = await _storage.getAccessToken();
-    if (kDebugMode) debugPrint('[auth] attachSavedToken -> ${t != null}');
-    return t != null && t.isNotEmpty;
-  }
-
-  Future<void> logout() async {
+  Future<User?> me() async {
     try {
-      await _api.postV1('/auth/logout');
+      final res = await _api.get('/me');
+      if (res.statusCode == 200 && res.data != null) {
+        return User.fromJson((res.data as Map).cast<String, dynamic>());
+      }
+      return null;
     } catch (_) {
-      // ignore if backend ไม่มี route นี้
-    } finally {
-      await _storage.clear();
+      return null;
     }
   }
 
-  Future<User?> me() async {
-    final res = await _api.getV1('/me');
-    return _toUser(res.data);
-  }
-
-  // === Auth flows ===
   Future<(String, User?)> login({
     required String email,
     required String password,
   }) async {
-    final res = await _api.postV1(
+    final res = await _api.post(
       '/auth/login',
       data: {'email': email, 'password': password},
     );
 
     final data = (res.data as Map).cast<String, dynamic>();
+    final token = _pickAccessToken(data);
 
-    final (token, refresh) = _pickTokens(data);
     if (token == null || token.isEmpty) {
       throw DioException(
         requestOptions: res.requestOptions,
@@ -58,9 +47,9 @@ class AuthRepository {
       );
     }
 
-    await _storage.saveTokens(token, refresh);
+    await _storage.saveTokens(token, null);
 
-    final user = _pickUser(data);
+    final user = _parseUser(data);
     return (token, user);
   }
 
@@ -69,76 +58,53 @@ class AuthRepository {
     required String email,
     required String password,
   }) async {
-    final res = await _api.postV1(
+    final res = await _api.post(
       '/auth/register',
       data: {'name': name, 'email': email, 'password': password},
     );
 
     final data = (res.data as Map).cast<String, dynamic>();
+    final token = _pickAccessToken(data);
 
-    final (token, refresh) = _pickTokens(data);
     if (token != null && token.isNotEmpty) {
-      await _storage.saveTokens(token, refresh);
+      await _storage.saveTokens(token, null);
     }
 
-    final user = _pickUser(data);
+    final user = _parseUser(data);
     return (token ?? '', user);
   }
 
+  Future<void> logout() async {
+    try {
+      await _api.post('/auth/logout');
+    } catch (_) {
+    } finally {
+      await _storage.clear();
+    }
+  }
+
   Future<void> requestPasswordReset(String email) async {
-    await _api.postV1('/auth/forgot', data: {'email': email});
+    throw UnsupportedError('Password reset endpoint is not available yet');
   }
 
-  // === mappers & helpers ===
-
-  /// รองรับหลายรูปแบบ:
-  /// - { token, refresh_token }
-  /// - { access_token, refresh_token }
-  /// - { tokens: { access_token, refresh_token, expires_in } }
-  /// - { data: { access_token, refresh_token } }
-  (String?, String?) _pickTokens(Map<String, dynamic> m) {
-    String? access;
-    String? refresh;
-
-    // root
-    access = (m['token'] ?? m['access_token']) as String?;
-    refresh = m['refresh_token'] as String?;
-
-    // tokens nested
-    if (access == null || access.isEmpty) {
-      final t = m['tokens'];
-      if (t is Map) {
-        final tm = t.cast<String, dynamic>();
-        access = (tm['access_token'] ?? tm['token']) as String?;
-        refresh ??= tm['refresh_token'] as String?;
-      }
-    }
-
-    // data nested
-    if (access == null || access.isEmpty) {
-      final d = m['data'];
-      if (d is Map) {
-        final dm = d.cast<String, dynamic>();
-        access = (dm['access_token'] ?? dm['token']) as String?;
-        refresh ??= dm['refresh_token'] as String?;
-      }
-    }
-
-    return (access, refresh);
-  }
-
-  User? _pickUser(Map<String, dynamic> m) {
-    if (m['user'] is Map) {
-      return _toUser(m['user']);
-    }
-    if (m['data'] is Map && (m['data']['user'] is Map)) {
-      return _toUser(m['data']['user']);
+  User? _parseUser(Map<String, dynamic> data) {
+    final userMap = data['user'];
+    if (userMap is Map) {
+      return User.fromJson(userMap.cast<String, dynamic>());
     }
     return null;
   }
 
-  User _toUser(dynamic raw) {
-    final mm = (raw as Map).cast<String, dynamic>();
-    return User.fromJson(mm);
+  String? _pickAccessToken(Map<String, dynamic> data) {
+    final root = data['access_token'] ?? data['token'];
+    if (root is String && root.isNotEmpty) return root;
+
+    final tokens = data['tokens'];
+    if (tokens is Map) {
+      final nested = tokens['access_token'] ?? tokens['token'];
+      if (nested is String && nested.isNotEmpty) return nested;
+    }
+
+    return null;
   }
 }

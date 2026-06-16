@@ -61,8 +61,7 @@ class MedicineApiHttp implements MedicineApi {
   MedicineApiHttp(this._client);
   final Dio _client;
 
-  static const _root = '/api/v1/medicine';
-  static const _items = '$_root/items';
+  static const _root = '/medicine';
 
   // ===== 404-fallback helpers (คงเดิม) =====
   Future<Response<T>> _getWithFallback<T>(
@@ -116,8 +115,7 @@ class MedicineApiHttp implements MedicineApi {
     final query = (q == null || q.isEmpty) ? null : {'q': q};
 
     final res = await _getWithFallback<List<dynamic>>(
-      _items, // 1) ลอง /medicine/items ก่อน
-      fallback: _root, // 2) ถ้า 404 ค่อย /medicine
+      _root,
       query: query,
     );
 
@@ -128,10 +126,7 @@ class MedicineApiHttp implements MedicineApi {
 
   @override
   Future<MedicineDetail> detail(String id) async {
-    final res = await _getWithFallback<Map<String, dynamic>>(
-      '$_items/$id',
-      fallback: '$_root/$id',
-    );
+    final res = await _getWithFallback<Map<String, dynamic>>('$_root/$id');
 
     // res.data เป็น Map<String, dynamic>? -> ใส่ ! หรือทำ default
     return MedicineDetail.fromJson(res.data!);
@@ -141,14 +136,13 @@ class MedicineApiHttp implements MedicineApi {
 
   @override
   Future<void> create(CreateMedicinePayload p) async {
-    await _postWithFallback<void>(_items, fallback: _root, data: p.toJson());
+    await _postWithFallback<void>(_root, data: p.toJson());
   }
 
   @override
   Future<void> txnOut(String id, TxnOutPayload p) async {
     await _postWithFallback<void>(
-      '$_items/$id/txns/out',
-      fallback: '$_root/$id/txns/out',
+      '$_root/$id/txns/out',
       data: p.toJson(),
     );
   }
@@ -156,8 +150,7 @@ class MedicineApiHttp implements MedicineApi {
   @override
   Future<void> txnIn(String id, TxnInPayload p) async {
     await _postWithFallback<void>(
-      '$_items/$id/txns/in',
-      fallback: '$_root/$id/txns/in',
+      '$_root/$id/txns/in',
       data: p.toJson(),
     );
   }
@@ -165,8 +158,7 @@ class MedicineApiHttp implements MedicineApi {
   @override
   Future<void> putAlert(String id, MedicineAlert a) async {
     await _putWithFallback<void>(
-      '$_items/$id/alert',
-      fallback: '$_root/$id/alert',
+      '$_root/$id/alert',
       data: a.toJson(),
     );
   }

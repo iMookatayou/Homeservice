@@ -21,14 +21,21 @@ class AuthService {
       data: {'email': email, 'password': password},
     );
     final data = resp.data as Map<String, dynamic>;
-    final access = data['access_token'] as String;
+    final tokens = data['tokens'];
+    final access =
+        (data['access_token'] ??
+                data['token'] ??
+                (tokens is Map
+                    ? tokens['access_token'] ?? tokens['token']
+                    : null))
+            as String;
     final refresh = data['refresh_token'] as String?;
     await storage.saveTokens(access, refresh);
     return User.fromMap(data['user'] as Map<String, dynamic>);
   }
 
   Future<User> me() async {
-    final resp = await dio.get('/auth/me');
+    final resp = await dio.get('/me');
     return User.fromMap(resp.data as Map<String, dynamic>);
   }
 

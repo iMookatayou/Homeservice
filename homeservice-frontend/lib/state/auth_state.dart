@@ -1,10 +1,9 @@
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/user.dart';
 import '../repositories/auth_repository.dart';
-import '../providers.dart';
+import '../services/api_client.dart' show tokenStorageProvider;
 
 class AuthState {
   final User? user;
@@ -15,11 +14,11 @@ class AuthState {
   const AuthState({
     this.user,
     this.isAuthenticated = false,
-    this.loading = true, // เริ่มต้นให้ Splash ไปสั่งโหลด
+    this.loading = true,
     this.error,
   });
 
-  factory AuthState.unauthenticated() => const AuthState();
+  factory AuthState.unauthenticated() => const AuthState(loading: false);
 
   AuthState copyWith({
     User? user,
@@ -42,14 +41,15 @@ class AuthNotifier extends Notifier<AuthState> {
 
   @override
   AuthState build() {
-    _repo = ref.read(authRepositoryProvider); // อ่านทางเดียว
+    final storage = ref.read(tokenStorageProvider);
+    _repo = AuthRepository(storage: storage);
     return const AuthState(loading: true);
   }
 
   Future<bool> register(String name, String email, String password) async {
     state = state.copyWith(loading: true, error: null);
     try {
-      final (token, user) = await _repo.register(
+      final (_, user) = await _repo.register(
         name: name,
         email: email,
         password: password,
@@ -60,7 +60,7 @@ class AuthNotifier extends Notifier<AuthState> {
         isAuthenticated: me != null,
         loading: false,
       );
-      return true;
+      return me != null;
     } on DioException catch (e) {
       state = state.copyWith(loading: false, error: _extractError(e));
       return false;
@@ -73,8 +73,8 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<bool> login(String email, String password) async {
     state = state.copyWith(loading: true, error: null);
     try {
-      await _repo.login(email: email, password: password);
-      final me = await _repo.me();
+      final (_, user) = await _repo.login(email: email, password: password);
+      final me = user ?? await _repo.me();
       state = state.copyWith(
         user: me,
         isAuthenticated: me != null,
@@ -95,7 +95,6 @@ class AuthNotifier extends Notifier<AuthState> {
     try {
       await _repo.logout();
     } catch (_) {
-      // ignore
     } finally {
       state = const AuthState(loading: false);
     }
@@ -105,47 +104,34 @@ class AuthNotifier extends Notifier<AuthState> {
     if (_booting) return;
     _booting = true;
     try {
-      debugPrint('[auth] tryLoadSession start');
       state = state.copyWith(loading: true, error: null);
 
       final token = await _repo.currentToken().timeout(
         const Duration(seconds: 3),
-        onTimeout: () {
-          debugPrint('[auth] currentToken timeout');
-          return null;
-        },
+        onTimeout: () => null,
       );
 
       if (token == null || token.isEmpty) {
-        debugPrint('[auth] no token');
         state = const AuthState(loading: false);
         return;
       }
 
       final me = await _repo.me().timeout(
         const Duration(seconds: 5),
-        onTimeout: () {
-          debugPrint('[auth] me() timeout');
-          return null;
-        },
+        onTimeout: () => null,
       );
 
       if (me != null) {
-        debugPrint('[auth] authed');
         state = state.copyWith(user: me, isAuthenticated: true, loading: false);
       } else {
-        debugPrint('[auth] me null');
         state = const AuthState(loading: false);
       }
     } on DioException catch (e) {
-      final msg = _extractError(e);
-      debugPrint('[auth] DioException: $msg');
-      state = AuthState(loading: false, error: msg);
-    } catch (e) {
-      debugPrint('[auth] unknown: $e');
+      state = AuthState(loading: false, error: _extractError(e));
+    } catch (_) {
       state = const AuthState(loading: false);
     } finally {
-      _booting = false; // 👈 ปลดล็อค
+      _booting = false;
     }
   }
 
@@ -161,9 +147,10 @@ class AuthNotifier extends Notifier<AuthState> {
 
   String _extractError(DioException e) {
     final data = e.response?.data;
-    if (data is Map && data['message'] is String) {
-      return data['message'] as String;
+    if (data is Map) {
+      return (data['error'] ?? data['message'] ?? 'Unknown error').toString();
     }
+    if (data is String && data.isNotEmpty) return data;
     return 'Network error (${e.response?.statusCode ?? '-'})';
   }
 }
