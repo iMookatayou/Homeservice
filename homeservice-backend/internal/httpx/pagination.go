@@ -12,6 +12,7 @@ type Pagination struct {
 
 type PaginatedResponse struct {
 	Data   any        `json:"data"`
+	Items  any        `json:"items,omitempty"`
 	Paging Pagination `json:"paging"`
 }
 
@@ -29,5 +30,5 @@ func ParsePagination(r *http.Request) Pagination {
 }
 
 func Paginate(w http.ResponseWriter, data any, p Pagination) {
-	JSON(w, 200, PaginatedResponse{Data: data, Paging: p})
+	JSON(w, 200, PaginatedResponse{Data: data, Items: data, Paging: p})
 }

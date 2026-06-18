@@ -21,7 +21,7 @@ type MedicineAlert struct {
 	ItemID           string   `json:"item_id"`
 	MinQty           *float64 `json:"min_qty,omitempty"`
 	ExpiryWindowDays *int     `json:"expiry_window_days,omitempty"`
-	IsEnabled        bool     `json:"is_enabled"`
+	IsEnabled        bool     `json:"enabled"`
 }
 
 type CreateItemPayload struct {
@@ -32,6 +32,7 @@ type CreateItemPayload struct {
 	StockQty   float64    `json:"stock_qty"`
 	ExpiryDate *time.Time `json:"expiry_date,omitempty"`
 	Location   *string    `json:"location,omitempty"`
+	LocationID *string    `json:"location_id,omitempty"`
 	Note       *string    `json:"note,omitempty"`
 }
 

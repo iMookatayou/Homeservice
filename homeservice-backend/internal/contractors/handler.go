@@ -21,6 +21,7 @@ func NewHandler(svc *Service) *Handler {
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Get("/", h.list)
 	r.Post("/", h.create)
+	r.Get("/search", h.search)
 	r.Get("/favorites", h.listFavorites)
 
 	r.Route("/{id}", func(r chi.Router) {
@@ -29,6 +30,16 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		r.Delete("/", h.delete)
 		r.Post("/favorite", h.toggleFavorite)
 	})
+}
+
+func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
+	p := httpx.ParsePagination(r)
+	items, err := h.Svc.List(r.Context(), false, p.Limit, p.Offset)
+	if err != nil {
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	httpx.JSON(w, http.StatusOK, items)
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {

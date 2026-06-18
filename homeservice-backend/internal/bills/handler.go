@@ -19,6 +19,7 @@ func (h Handler) RegisterRoutes(r chi.Router) {
 	r.Post("/bills", h.create)
 	r.Get("/bills/summary", h.summary)
 	r.Get("/bills/{id}", h.getByID)
+	r.Put("/bills/{id}", h.update)
 	r.Patch("/bills/{id}", h.update)
 	r.Delete("/bills/{id}", h.delete)
 	r.Post("/bills/{id}/pay", h.markPaid)

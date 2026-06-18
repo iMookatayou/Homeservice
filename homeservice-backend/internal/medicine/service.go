@@ -27,6 +27,10 @@ func (s *Service) CreateItem(ctx context.Context, p CreateItemPayload) (*Medicin
 	if p.Name == "" {
 		return nil, errors.New("name is required")
 	}
+	location := p.Location
+	if location == nil {
+		location = p.LocationID
+	}
 	it := &MedicineItem{
 		Name:       p.Name,
 		Form:       p.Form,
@@ -34,7 +38,7 @@ func (s *Service) CreateItem(ctx context.Context, p CreateItemPayload) (*Medicin
 		Category:   p.Category,
 		StockQty:   p.StockQty,
 		ExpiryDate: p.ExpiryDate,
-		Location:   p.Location,
+		Location:   location,
 		Note:       p.Note,
 	}
 	if err := s.Repo.Create(ctx, it); err != nil {
