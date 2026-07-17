@@ -1,7 +1,7 @@
+import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/purchase_model.dart'; // <- มี class Purchase
-import '../repositories/purchase_repository.dart';
+import '../models/purchase_model.dart';
 import 'purchase_providers.dart';
 
 /// Payload สำหรับ create (ตามสเปค STEP 1)
@@ -38,4 +38,47 @@ final createPurchaseProvider =
       // refresh list ทันทีตาม Acceptance
       ref.invalidate(purchasesListProvider);
       return created;
+    });
+
+class UploadAttachmentPayload {
+  final String id;
+  final File file;
+  final String? filename;
+  const UploadAttachmentPayload({
+    required this.id,
+    required this.file,
+    this.filename,
+  });
+}
+
+final uploadAttachmentProvider =
+    FutureProvider.family<Purchase, UploadAttachmentPayload>((
+      ref,
+      payload,
+    ) async {
+      final repo = ref.read(purchaseRepoProvider);
+      final updated = await repo.uploadAttachment(
+        payload.id,
+        payload.file,
+        filename: payload.filename,
+      );
+      ref.invalidate(purchaseDetailProvider(payload.id));
+      return updated;
+    });
+
+class DeleteAttachmentPayload {
+  final String id;
+  final String fileId;
+  const DeleteAttachmentPayload({required this.id, required this.fileId});
+}
+
+final deleteAttachmentProvider =
+    FutureProvider.family<Purchase, DeleteAttachmentPayload>((
+      ref,
+      payload,
+    ) async {
+      final repo = ref.read(purchaseRepoProvider);
+      final updated = await repo.deleteAttachment(payload.id, payload.fileId);
+      ref.invalidate(purchaseDetailProvider(payload.id));
+      return updated;
     });

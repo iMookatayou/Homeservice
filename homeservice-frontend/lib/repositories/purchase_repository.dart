@@ -1,3 +1,4 @@
+import 'dart:io';
 import '../models/purchase_model.dart';
 import '../models/purchase_item.dart';
 import '../services/purchase_api.dart';
@@ -47,4 +48,10 @@ class PurchaseRepository {
   Future<Purchase> markDelivered(String id) =>
       api.progress(id, const ProgressPayload(nextStatus: 'delivered'));
   Future<Purchase> cancel(String id) => api.cancel(id);
+
+  Future<Purchase> uploadAttachment(String id, File file, {String? filename}) =>
+      api.uploadAttachment(id: id, file: file, filename: filename);
+
+  Future<Purchase> deleteAttachment(String id, String fileId) =>
+      api.deleteAttachment(id: id, fileId: fileId);
 }

@@ -1,7 +1,11 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../state/purchase_providers.dart';
+import '../state/purchase_actions.dart';
 import '../models/purchase_model.dart';
 
 class PurchaseDetailScreen extends ConsumerWidget {
@@ -38,8 +42,35 @@ class PurchaseDetailScreen extends ConsumerWidget {
           onEdit: () {
             // TODO: ไปหน้าแก้ไข
           },
-          onAttach: () {
-            // TODO: เปิดตัวเลือกแนบไฟล์/รูป/วิดีโอ
+          onAttach: () async {
+            try {
+              final result = await FilePicker.platform.pickFiles(
+                type: FileType.any,
+              );
+              if (result != null && result.files.single.path != null) {
+                final file = File(result.files.single.path!);
+                final filename = result.files.single.name;
+                
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('กำลังอัปโหลดไฟล์...')),
+                );
+                
+                await ref.read(uploadAttachmentProvider(
+                  UploadAttachmentPayload(id: id, file: file, filename: filename),
+                ).future);
+                
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('อัปโหลดไฟล์สำเร็จ')),
+                );
+              }
+            } catch (e) {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('อัปโหลดไฟล์ล้มเหลว: $e')),
+              );
+            }
           },
         ),
       ),
@@ -131,9 +162,13 @@ class _DetailView extends StatelessWidget {
                   ],
                 ),
         ),
-        const SizedBox(height: 24),
-        // เผื่อคุณต่อ “ไฟล์แนบ/รูป/วิดีโอ” ภายหลัง
-        // _SectionCard(title: 'ไฟล์แนบ', child: _AttachmentsGrid(files: p.files)),
+        _SectionCard(
+          title: 'ไฟล์แนบ',
+          child: _AttachmentsGrid(
+            purchaseId: p.id,
+            attachments: p.attachments ?? [],
+          ),
+        ),
       ],
     );
   }
@@ -471,6 +506,117 @@ class _ErrorState extends StatelessWidget {
           FilledButton(onPressed: onRetry, child: const Text('ลองอีกครั้ง')),
         ],
       ),
+    );
+  }
+}
+
+class _AttachmentsGrid extends ConsumerWidget {
+  final String purchaseId;
+  final List<FileAttachment> attachments;
+  const _AttachmentsGrid({
+    required this.purchaseId,
+    required this.attachments,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    if (attachments.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 8),
+        child: Text(
+          '— ไม่มีไฟล์แนบ —',
+          style: TextStyle(color: Colors.grey),
+        ),
+      );
+    }
+
+    return Column(
+      children: attachments.map((att) {
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          elevation: 0,
+          color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+          ),
+          child: ListTile(
+            leading: const Icon(Icons.insert_drive_file),
+            title: Text(
+              att.fileName,
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            subtitle: att.bytes != null
+                ? Text('${(att.bytes! / 1024).toStringAsFixed(1)} KB')
+                : null,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.open_in_new),
+                  tooltip: 'เปิดดู',
+                  onPressed: () async {
+                    final uri = Uri.parse(att.url);
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    } else {
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('ไม่สามารถเปิดลิงก์ได้')),
+                      );
+                    }
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete_outline, color: Colors.red),
+                  tooltip: 'ลบไฟล์แนบ',
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('ลบไฟล์แนบ?'),
+                        content: Text('ต้องการลบไฟล์ "${att.fileName}" ใช่หรือไม่?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, false),
+                            child: const Text('ยกเลิก'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx, true),
+                            child: const Text('ลบ', style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      try {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('กำลังลบไฟล์แนบ...')),
+                        );
+                        await ref.read(deleteAttachmentProvider(
+                          DeleteAttachmentPayload(id: purchaseId, fileId: att.id),
+                        ).future);
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('ลบไฟล์แนบสำเร็จ')),
+                        );
+                      } catch (e) {
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('ลบไฟล์แนบล้มเหลว: $e')),
+                        );
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
