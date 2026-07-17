@@ -91,8 +91,8 @@ class LocationController extends Notifier<UserLocation?> {
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(
           accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 5),
         ),
-        timeLimit: const Duration(seconds: 5),
       );
       state = UserLocation(
         lat: pos.latitude,

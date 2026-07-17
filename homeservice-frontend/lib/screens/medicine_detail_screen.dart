@@ -7,7 +7,6 @@ import '../state/medicine_provider.dart';
 import '../widgets/batch_tile.dart';
 import '../widgets/qty_badge.dart' as q;
 import '../widgets/alert_badge.dart';
-import '../widgets/txn_out_sheet.dart';
 import '../widgets/txn_in_sheet.dart';
 import '../widgets/alert_sheet.dart';
 import '../widgets/error_state.dart';

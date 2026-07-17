@@ -101,7 +101,7 @@ class _MedicineFormScreenState extends ConsumerState<MedicineFormScreen> {
                 // Location dropdown
                 locationsAsync.when(
                   data: (list) => DropdownButtonFormField<String?>(
-                    value: _locationId,
+                    initialValue: _locationId,
                     items: [
                       DropdownMenuItem<String?>(
                         value: null,

@@ -11,7 +11,6 @@ import '../repositories/notes_repository.dart';
 
 // ✅ ใช้ Header แบบเดียวกับหน้าอื่น
 import '../widgets/top_nav_bar.dart';
-import '../widgets/search_bar_field.dart';
 import '../widgets/header_row.dart';
 
 class NotesScreen extends ConsumerStatefulWidget {
@@ -21,7 +20,7 @@ class NotesScreen extends ConsumerStatefulWidget {
 }
 
 class _NotesScreenState extends ConsumerState<NotesScreen> {
-  static const _QUERY = NotesQuery(limit: 50, offset: 0);
+  static const _query = NotesQuery(limit: 50, offset: 0);
 
   final _q = TextEditingController();
   final _scroll = ScrollController();
@@ -42,7 +41,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final notes = ref.watch(notesProvider(_QUERY));
+    final notes = ref.watch(notesProvider(_query));
     const accent = Color(0xFF1F4E9E);
 
     return Theme(
@@ -63,7 +62,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
           actions: [
             IconButton(
               tooltip: 'Refresh',
-              onPressed: () => ref.refresh(notesProvider(_QUERY)),
+              onPressed: () async => await ref.refresh(notesProvider(_query).future),
               icon: const Icon(Icons.refresh),
             ),
             IconButton(
@@ -111,7 +110,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                   elevation: 0,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: BorderSide(color: Colors.black.withOpacity(0.06)),
+                    side: BorderSide(color: Colors.black.withValues(alpha: 0.06)),
                   ),
                   child: Padding(
                     padding: const EdgeInsets.all(10),
@@ -163,7 +162,9 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
                         notes.maybeWhen(
                           data: (items) {
                             final set = <String>{};
-                            for (final n in items) set.addAll(n.tags);
+                            for (final n in items) {
+                              set.addAll(n.tags);
+                            }
                             final list = set.toList()..sort();
                             return SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
@@ -263,7 +264,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
             const Center(child: CircularProgressIndicator.adaptive()),
         error: (e, _) => _ErrorView(
           message: '$e',
-          onRetry: () => ref.refresh(notesProvider(_QUERY)),
+          onRetry: () => ref.refresh(notesProvider(_query)),
         ),
         data: (items) {
           final filtered = _applyFilters(
@@ -299,7 +300,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
 
           return RefreshIndicator(
             onRefresh: () async {
-              await ref.refresh(notesProvider(_QUERY).future);
+              final _ = await ref.refresh(notesProvider(_query).future);
             },
             child: ListView.separated(
               controller: _scroll,
@@ -390,7 +391,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
         SnackBar(content: Text(_shortError(e, fallback: 'Done error'))),
       );
     } finally {
-      ref.invalidate(notesProvider(_QUERY));
+      ref.invalidate(notesProvider(_query));
     }
   }
 
@@ -411,7 +412,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
         SnackBar(content: Text(_shortError(e, fallback: 'Pin error'))),
       );
     } finally {
-      ref.invalidate(notesProvider(_QUERY));
+      ref.invalidate(notesProvider(_query));
     }
   }
 
@@ -442,18 +443,18 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
 
     try {
       await ref.read(notesRepositoryProvider).delete(note.id);
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('ลบแล้ว')));
       }
     } on DioException catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_shortError(e, fallback: 'Delete error'))),
       );
     } finally {
-      ref.invalidate(notesProvider(_QUERY));
+      ref.invalidate(notesProvider(_query));
     }
   }
 
@@ -483,7 +484,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
           pinned: result.pinned,
           cancelToken: cancel,
         );
-        if (mounted) {
+        if (context.mounted) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text('เพิ่มโน้ตแล้ว')));
@@ -497,19 +498,19 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
           pinned: result.pinned,
           cancelToken: cancel,
         );
-        if (mounted) {
+        if (context.mounted) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(const SnackBar(content: Text('แก้ไขโน้ตแล้ว')));
         }
       }
     } on DioException catch (e) {
-      if (!mounted) return;
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(_shortError(e, fallback: 'Save error'))),
       );
     } finally {
-      ref.invalidate(notesProvider(_QUERY));
+      ref.invalidate(notesProvider(_query));
     }
   }
 
@@ -604,7 +605,7 @@ class _SearchFieldState extends State<_SearchField> {
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: BorderSide(color: Colors.black.withOpacity(0.08)),
+          borderSide: BorderSide(color: Colors.black.withValues(alpha: 0.08)),
         ),
       ),
     );
@@ -685,14 +686,13 @@ class _NoteCardState extends State<_NoteCard> with TickerProviderStateMixin {
   String _previewBody(String body, {int limit = 140}) {
     if (_expanded) return body;
     if (body.length <= limit) return body;
-    return body.substring(0, limit).trimRight() + ' …';
+    return '${body.substring(0, limit).trimRight()} …';
   }
 
   @override
   Widget build(BuildContext context) {
     final n = widget.note;
     final df = DateFormat('yyyy-MM-dd HH:mm');
-    final cat = (n.category ?? 'general');
     final editedSuffix = n.isEdited ? ' (edited)' : '';
 
     final statusPill = n.isDone
@@ -718,7 +718,7 @@ class _NoteCardState extends State<_NoteCard> with TickerProviderStateMixin {
       margin: EdgeInsets.zero,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: Colors.black.withOpacity(0.06)),
+        side: BorderSide(color: Colors.black.withValues(alpha: 0.06)),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -872,7 +872,7 @@ class _Pill extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.black.withOpacity(0.04)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
       ),
       child: Text(
         text,
@@ -983,7 +983,7 @@ class _EditorSheetState extends State<_EditorSheet> {
             ),
             const SizedBox(height: 10),
             DropdownButtonFormField<String>(
-              value: _category,
+              initialValue: _category,
               items: const [
                 DropdownMenuItem(value: 'general', child: Text('General')),
                 DropdownMenuItem(value: 'bills', child: Text('Bills')),
@@ -1007,7 +1007,7 @@ class _EditorSheetState extends State<_EditorSheet> {
               title: const Text('Pinned'),
               dense: true,
               contentPadding: EdgeInsets.zero,
-              activeColor: widget.accent,
+              activeThumbColor: widget.accent,
             ),
             const SizedBox(height: 10),
             TextField(

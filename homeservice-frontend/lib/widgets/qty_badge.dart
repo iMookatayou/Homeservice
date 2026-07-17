@@ -11,8 +11,8 @@ Widget qtyBadge(int qty, {int low = 10, bool dense = false}) {
     padding: p,
     decoration: BoxDecoration(
       color: isLow
-          ? Colors.orange.withOpacity(.15)
-          : Colors.green.withOpacity(.12),
+          ? Colors.orange.withValues(alpha: .15)
+          : Colors.green.withValues(alpha: .12),
       borderRadius: BorderRadius.circular(999),
       border: Border.all(color: isLow ? Colors.orange : Colors.green),
     ),

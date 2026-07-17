@@ -30,15 +30,15 @@ final notesProvider = FutureProvider.autoDispose.family<List<Note>, NotesQuery>(
 
     // ให้ provider อยู่รอดชั่วคราวเวลาเปลี่ยนหน้า/เลื่อน tab
     final link = ref.keepAlive();
-    Timer? _timer;
+    Timer? timer;
     ref.onCancel(() {
       // รอ 30s ก่อนปิดจริง ลดการรีเฟรชถี่ ๆ เวลา user สลับจอ
-      _timer = Timer(const Duration(seconds: 30), () {
+      timer = Timer(const Duration(seconds: 30), () {
         link.close();
       });
     });
     ref.onResume(() {
-      _timer?.cancel();
+      timer?.cancel();
     });
 
     // ยกเลิก request เมื่อ provider ถูก dispose

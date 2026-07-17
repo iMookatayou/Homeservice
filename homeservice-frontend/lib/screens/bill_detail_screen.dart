@@ -38,8 +38,9 @@ class BillDetailScreen extends ConsumerWidget {
   }
 
   Color _dueColor(BuildContext context) {
-    if (bill.status == 'paid')
+    if (bill.status == 'paid') {
       return Theme.of(context).colorScheme.onSurfaceVariant;
+    }
     final d = _daysDiff(bill.dueDate);
     if (d < 0) return _overdue;
     if (d <= 3) return _soon;
@@ -55,7 +56,7 @@ class BillDetailScreen extends ConsumerWidget {
 
     final isPaid = bill.status == 'paid';
     final statusFg = isPaid ? _green : _red;
-    final statusBg = statusFg.withOpacity(0.12);
+    final statusBg = statusFg.withValues(alpha: 0.12);
 
     final mark = ref.watch(billMarkPaidProvider);
 
@@ -115,7 +116,7 @@ class BillDetailScreen extends ConsumerWidget {
                             _chip(
                               label: 'Due ${dtDay.format(bill.dueDate)}',
                               fg: _dueColor(context),
-                              bg: _dueColor(context).withOpacity(0.08),
+                              bg: _dueColor(context).withValues(alpha: 0.08),
                             ),
                           ],
                         ),
@@ -239,7 +240,7 @@ class BillDetailScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: fg.withOpacity(0.35)),
+        border: Border.all(color: fg.withValues(alpha: 0.35)),
       ),
       child: Text(
         label,

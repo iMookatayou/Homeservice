@@ -33,5 +33,5 @@ final authServiceProvider = Provider<AuthService>((ref) {
 
 final authRepositoryProvider = Provider<AuthRepository>((ref) {
   final storage = ref.read(tokenStorageProvider);
-  return AuthRepository(storage: storage);
+  return AuthRepository(storage: storage, ref: ref);
 });

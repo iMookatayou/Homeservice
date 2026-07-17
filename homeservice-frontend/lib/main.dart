@@ -70,9 +70,10 @@ class HomeServiceApp extends ConsumerWidget {
       ),
       builder: (context, child) {
         final media = MediaQuery.of(context);
-        final clampedScale = media.textScaleFactor.clamp(0.9, 1.2);
+        final baseScale = media.textScaler.scale(1.0);
+        final clampedScale = baseScale.clamp(0.9, 1.2);
         return MediaQuery(
-          data: media.copyWith(textScaleFactor: clampedScale),
+          data: media.copyWith(textScaler: TextScaler.linear(clampedScale)),
           child: Directionality(
             textDirection: TextDirection.ltr,
             child: child ??

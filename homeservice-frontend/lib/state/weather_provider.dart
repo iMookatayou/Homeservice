@@ -32,13 +32,15 @@ final locationProvider = FutureProvider<Position>((ref) async {
   // 2) เอา current พร้อม timeout + accuracy กลาง ๆ
   try {
     return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.medium,
-      timeLimit: const Duration(seconds: 5),
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.medium,
+        timeLimit: Duration(seconds: 5),
+      ),
     );
   } on TimeoutException {
     // Fallback ถ้ารอ GPS นานเกินไป
     return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.low,
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.low),
     );
   }
 });

@@ -61,7 +61,7 @@ class _BillFormScreenState extends ConsumerState<BillFormScreen> {
             children: [
               // Type
               DropdownButtonFormField<String>(
-                value: _type,
+                initialValue: _type,
                 decoration: const InputDecoration(labelText: 'Type'),
                 items: const [
                   DropdownMenuItem(value: 'electric', child: Text('electric')),
@@ -107,7 +107,7 @@ class _BillFormScreenState extends ConsumerState<BillFormScreen> {
                     dateLabel,
                     style: TextStyle(
                       color: _due == null
-                          ? Colors.black.withOpacity(.45)
+                          ? Colors.black.withValues(alpha: .45)
                           : null,
                     ),
                   ),
@@ -117,7 +117,7 @@ class _BillFormScreenState extends ConsumerState<BillFormScreen> {
 
               // Status
               DropdownButtonFormField<String>(
-                value: _status,
+                initialValue: _status,
                 decoration: const InputDecoration(labelText: 'Status'),
                 items: const [
                   DropdownMenuItem(value: 'unpaid', child: Text('unpaid')),
@@ -173,12 +173,13 @@ class _BillFormScreenState extends ConsumerState<BillFormScreen> {
                             );
 
                         final s = ref.read(billCreateProvider);
-                        if (mounted && !s.hasError) {
+                        if (!context.mounted) return;
+                        if (!s.hasError) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('สร้างบิลสำเร็จ')),
                           );
                           Navigator.of(context).pop(true);
-                        } else if (mounted && s.hasError) {
+                        } else {
                           ScaffoldMessenger.of(
                             context,
                           ).showSnackBar(SnackBar(content: Text('${s.error}')));

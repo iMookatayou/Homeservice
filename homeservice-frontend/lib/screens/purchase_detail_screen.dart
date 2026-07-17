@@ -86,11 +86,11 @@ class _DetailView extends StatelessWidget {
   Widget build(BuildContext context) {
     final nf = NumberFormat.currency(
       locale: 'th_TH',
-      symbol: p.currency == null || p.currency!.isEmpty ? '฿' : p.currency!,
+      symbol: (p.currency == null || p.currency!.isEmpty) ? '฿' : p.currency!,
       decimalDigits: 2,
     );
 
-    final items = p.items ?? [];
+    final items = p.items;
     final lineTotal = items.fold<double>(
       0,
       (sum, it) => sum + ((it.price ?? 0.0) * ((it.qty ?? 0).toDouble())),
@@ -132,10 +132,7 @@ class _DetailView extends StatelessWidget {
                         unit: it.unit,
                         qty: it.qty,
                         price: it.price,
-                        currencySymbol:
-                            p.currency == null || p.currency!.isEmpty
-                            ? '฿'
-                            : p.currency!,
+                        currencySymbol: (p.currency == null || p.currency!.isEmpty) ? '฿' : p.currency!,
                         nf: nf,
                       ),
                     ),
@@ -183,16 +180,16 @@ class _SummaryCard extends StatelessWidget {
     final cs = Theme.of(ctx).colorScheme;
     switch (p.status) {
       case PurchaseStatus.planned:
-        return cs.surfaceVariant;
+        return cs.surfaceContainerHighest;
       case PurchaseStatus.ordered:
-        return Colors.blue.withOpacity(.15);
+        return Colors.blue.withValues(alpha: .15);
       case PurchaseStatus.bought:
-        return Colors.amber.withOpacity(.2);
+        return Colors.amber.withValues(alpha: .2);
       case PurchaseStatus.delivered:
-        return Colors.green.withOpacity(.2);
+        return Colors.green.withValues(alpha: .2);
       case PurchaseStatus.canceled:
       case PurchaseStatus.cancelled:
-        return Colors.red.withOpacity(.2);
+        return Colors.red.withValues(alpha: .2);
     }
   }
 
@@ -423,7 +420,7 @@ class _InfoChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: cs.surfaceVariant,
+        color: cs.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
@@ -535,7 +532,7 @@ class _AttachmentsGrid extends ConsumerWidget {
         return Card(
           margin: const EdgeInsets.only(bottom: 8),
           elevation: 0,
-          color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.3),
+          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
             side: BorderSide(

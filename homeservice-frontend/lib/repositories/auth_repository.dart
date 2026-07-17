@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/user.dart';
 import '../services/api_client.dart';
 import '../services/token_storage.dart';
@@ -8,9 +10,9 @@ class AuthRepository {
   final ApiClient _api;
   final TokenStorage _storage;
 
-  AuthRepository({required TokenStorage storage})
+  AuthRepository({required TokenStorage storage, required Ref ref})
       : _storage = storage,
-        _api = ApiClient(tokenStorage: storage);
+        _api = ApiClient(tokenStorage: storage, ref: ref);
 
   Future<String?> currentToken() => _storage.getAccessToken();
 
