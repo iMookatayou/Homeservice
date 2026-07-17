@@ -2,15 +2,23 @@ class User {
   final String id;
   final String name;
   final String email;
+  final String role;
 
-  const User({required this.id, required this.name, required this.email});
+  const User({
+    required this.id,
+    required this.name,
+    required this.email,
+    this.role = 'member',
+  });
 
   factory User.fromJson(Map<String, dynamic> j) => User(
-    id: '${j['id']}',
-    name: (j['name'] ?? '').toString(),
-    email: (j['email'] ?? '').toString(),
+    id: j['id']?.toString() ?? '',
+    name: j['name']?.toString() ?? '',
+    email: j['email']?.toString() ?? '',
+    role: j['role']?.toString() ?? 'member',
   );
 
-  // ถ้าคุณมี fromMap อยู่แล้ว ให้ใช้ชื่อเดียวกันทุกที่เพื่อเลี่ยงสับสน
   factory User.fromMap(Map<String, dynamic> j) => User.fromJson(j);
+
+  bool get isAdmin => role == 'admin';
 }

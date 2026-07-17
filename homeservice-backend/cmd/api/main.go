@@ -9,23 +9,19 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/iMookatayou/homeservice-backend/internal/auth"
+	"github.com/iMookatayou/homeservice-backend/internal/bills"
+	"github.com/iMookatayou/homeservice-backend/internal/chores"
 	"github.com/iMookatayou/homeservice-backend/internal/config"
+	"github.com/iMookatayou/homeservice-backend/internal/contractors"
 	"github.com/iMookatayou/homeservice-backend/internal/db"
+	"github.com/iMookatayou/homeservice-backend/internal/files"
 	"github.com/iMookatayou/homeservice-backend/internal/health"
 	"github.com/iMookatayou/homeservice-backend/internal/httpx"
-	"github.com/iMookatayou/homeservice-backend/internal/notes"
-	"github.com/iMookatayou/homeservice-backend/internal/user"
-	"github.com/iMookatayou/homeservice-backend/internal/weather"
-
-	"github.com/iMookatayou/homeservice-backend/internal/bills"
-	"github.com/iMookatayou/homeservice-backend/internal/contractors"
-	"github.com/iMookatayou/homeservice-backend/internal/files"
 	"github.com/iMookatayou/homeservice-backend/internal/medicine"
+	"github.com/iMookatayou/homeservice-backend/internal/notes"
 	"github.com/iMookatayou/homeservice-backend/internal/purchases"
-	"github.com/iMookatayou/homeservice-backend/internal/stocks"
 	"github.com/iMookatayou/homeservice-backend/internal/storage"
-
-	"github.com/iMookatayou/homeservice-backend/internal/media"
+	"github.com/iMookatayou/homeservice-backend/internal/user"
 )
 
 func main() {
@@ -39,128 +35,84 @@ func main() {
 		logger.Fatal("db connect", zap.Error(err))
 	}
 	defer pool.Close()
-	
+
+	// Users & Auth
 	uRepo := user.Repo{DB: pool}
 	uHandler := user.Handler{Repo: uRepo, JWTSecret: cfg.JWTSecret}
 
+	// Notes
 	nRepo := notes.Repo{DB: pool}
 	nHandler := notes.Handler{Repo: nRepo}
 
-	wHandler := weather.Handler{}
-
+	// Files
 	st := storage.New(cfg)
 	fRepo := files.Repo{DB: pool}
 	fHandler := files.Handler{Repo: fRepo, Storage: st, JWTSecret: cfg.JWTSecret}
 
+	// Purchases
 	pRepo := purchases.NewRepo(pool)
 	pSvc := purchases.NewService(pRepo)
 	pHandler := purchases.Handler{Svc: pSvc}
-	pRegistrar := purchases.Registrar{H: pHandler}
 
-	httpClient := &http.Client{Timeout: 15 * time.Second}
-	ctrRepo := contractors.NewRepo(10 * time.Minute)          
-	ctrSvc := contractors.NewService(httpClient, ctrRepo, "") 
-	ctrH := contractors.Handler{Svc: ctrSvc}
-
+	// Bills
 	bRepo := bills.Repo{DB: pool}
 	bSvc := bills.NewService(bRepo)
 	bHandler := bills.Handler{Svc: bSvc}
-	bRegistrar := bills.Registrar{H: bHandler}
 
-	stkRepo := stocks.NewPgRepo(pool)
-	stkSvc := &stocks.Service{
-		Repo:       stkRepo,
-		Prov:       stocks.NewMockProvider(), 
-		StaleAfter: 3 * time.Minute,
-	}
+	// Contractors
+	ctrRepo := contractors.NewRepo(pool)
+	ctrSvc := contractors.NewService(ctrRepo)
+	ctrH := contractors.NewHandler(ctrSvc)
 
-	mRepo := medicine.NewPGRepo(pool)
-	mSvc := &medicine.Service{Repo: mRepo, Now: time.Now}
+	// Medicine
+	mRepo := medicine.NewRepo(pool)
+	mSvc := medicine.NewService(mRepo)
+	mHandler := medicine.NewHandler(mSvc)
 
-	acqMedia, err := pool.Acquire(ctx)
-	if err != nil {
-		logger.Fatal("acquire media conn", zap.Error(err))
-	}
-	defer acqMedia.Release()
+	// Chores
+	choresHandler := chores.Handler{Repo: chores.Repo{DB: pool}}
 
-	mdRepo := media.NewPGRepo(acqMedia.Conn())
-	mdSvc := media.NewService(mdRepo)
-	mdH := media.NewHandler(mdSvc)
-
-	wRepo := media.NewWorkerRepo(pool)
-
+	// Router
 	r := chi.NewRouter()
 	for _, m := range httpx.CommonMiddlewares(cfg.CorsOrigin) {
 		r.Use(m)
 	}
 
-	if cfg.StorageBackend == "local" && cfg.LocalDir != "" {
-		fs := http.StripPrefix("/static/", http.FileServer(http.Dir(cfg.LocalDir)))
-		r.Handle("/static/*", fs)
-	}
-
 	r.Get("/healthz", health.Live)
 	r.Get("/readyz", health.Ready)
+
 	r.Route("/api/v1", func(api chi.Router) {
-		// public 
+		// Public
 		api.Post("/auth/register", uHandler.Register)
 		api.Post("/auth/login", uHandler.Login)
-		api.Get("/weather/today", wHandler.Today)
+		api.Post("/auth/refresh", uHandler.Refresh)
+		api.Post("/auth/forgot-password", uHandler.ForgotPassword)
+		api.Post("/auth/reset-password", uHandler.ResetPassword)
 
-		// contractors search 
-		ctrH.RegisterRoutes(api)
-
-		// auth-required
+		// Auth required
 		api.Group(func(pr chi.Router) {
 			pr.Use(auth.RequireAuth(cfg.JWTSecret, auth.NewClaims))
+
 			pr.Get("/me", uHandler.Me)
+			pr.Patch("/me", uHandler.UpdateProfile)
+			pr.Post("/me/password", uHandler.ChangePassword)
+			pr.Post("/auth/logout", uHandler.Logout)
 
 			nHandler.RegisterRoutes(pr)
 			fHandler.RegisterRoutes(pr)
+			choresHandler.RegisterRoutes(pr)
+			pHandler.RegisterRoutes(pr)
+			bHandler.RegisterRoutes(pr)
 
-			// purchases
-			pRegistrar.Register(pr)
-
-			// bills
-			bRegistrar.Register(pr)
-
-			// stocks
-			stocks.RegisterRoutes(pr, &stocks.Handler{SVC: stkSvc})
-
-			// medicine
 			pr.Route("/medicine", func(r chi.Router) {
-				medicine.MountHTTP(r, mSvc)
+				mHandler.RegisterRoutes(r)
 			})
 
-			// media
-			mdH.Mount(pr)
-		})
-
-		// admin-only
-		api.Group(func(ad chi.Router) {
-			ad.Use(auth.RequireAdmin(cfg.JWTSecret, auth.NewClaims))
+			pr.Route("/contractors", func(r chi.Router) {
+				ctrH.RegisterRoutes(r)
+			})
 		})
 	})
-
-	// debug: dump all routes at startup
-	_ = chi.Walk(r, func(method, route string, _ http.Handler, _ ...func(http.Handler) http.Handler) error {
-		logger.Info("route", zap.String("method", method), zap.String("path", route))
-		return nil
-	})
-
-	// quotes worker (mock)
-	go func() {
-		_ = (&stocks.QuotesWorker{
-			Repo:  stkSvc.Repo,
-			Prov:  stkSvc.Prov,
-			Every: 5 * time.Second,
-		}).Run(context.Background())
-	}()
-
-	go func() {
-		worker := media.NewRSSWorker(wRepo, 3*time.Minute, 5*time.Second, 100)
-		_ = worker.Run(context.Background())
-	}()
 
 	srv := &http.Server{
 		Addr:              ":" + cfg.AppPort,

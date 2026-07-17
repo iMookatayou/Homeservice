@@ -2,85 +2,166 @@ package contractors
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
-	"sort"
 	"strconv"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/iMookatayou/homeservice-backend/internal/auth"
+	"github.com/iMookatayou/homeservice-backend/internal/httpx"
 )
 
 type Handler struct {
 	Svc *Service
 }
 
-func (h Handler) RegisterRoutes(r chi.Router) {
-	r.Get("/contractors/search", h.Search)
+func NewHandler(svc *Service) *Handler {
+	return &Handler{Svc: svc}
 }
 
-// Handler 
-func (h Handler) Search(w http.ResponseWriter, r *http.Request) {
-	lat, _ := strconv.ParseFloat(r.URL.Query().Get("lat"), 64)
-	lng, _ := strconv.ParseFloat(r.URL.Query().Get("lng"), 64)
-	if lat == 0 && lng == 0 {
-		http.Error(w, "lat/lng required", http.StatusBadRequest)
-		return
+func (h *Handler) RegisterRoutes(r chi.Router) {
+	r.Get("/", h.list)
+	r.Post("/", h.create)
+	r.Get("/search", h.search)
+	r.Get("/favorites", h.listFavorites)
+
+	r.Route("/{id}", func(r chi.Router) {
+		r.Get("/", h.getByID)
+		r.Patch("/", h.update)
+		r.Delete("/", h.delete)
+		r.Post("/favorite", h.toggleFavorite)
+	})
+}
+
+func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
+	p := httpx.ParsePagination(r)
+	
+	f := SearchFilter{
+		Query:  r.URL.Query().Get("q"),
+		Type:   r.URL.Query().Get("type"),
+		Limit:  p.Limit,
+		Offset: p.Offset,
+	}
+	
+	if latStr := r.URL.Query().Get("lat"); latStr != "" {
+		if lat, err := strconv.ParseFloat(latStr, 64); err == nil {
+			f.Lat = &lat
+		}
+	}
+	if lngStr := r.URL.Query().Get("lng"); lngStr != "" {
+		if lng, err := strconv.ParseFloat(lngStr, 64); err == nil {
+			f.Lng = &lng
+		}
+	}
+	if radStr := r.URL.Query().Get("radius"); radStr != "" {
+		if rad, err := strconv.ParseFloat(radStr, 64); err == nil {
+			f.Radius = &rad
+		}
 	}
 
-	radius, _ := strconv.Atoi(r.URL.Query().Get("radius"))
-	if radius <= 0 {
-		radius = 5000 // default 5 กม.
-	}
-
-	q := strings.TrimSpace(r.URL.Query().Get("q"))
-	tp := strings.TrimSpace(r.URL.Query().Get("type"))
-
-	// เรียก service ไปค้นจาก Overpass API
-	list, err := h.Svc.Search(lat, lng, radius)
+	items, err := h.Svc.Search(r.Context(), f)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadGateway)
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-
-	// กรองผลลัพธ์ตาม type และ q
-	out := make([]Contractor, 0, len(list))
-	for _, c := range list {
-		if tp != "" && !contains(c.Types, tp) {
-			continue
-		}
-		if q != "" {
-			lq := strings.ToLower(q)
-			if !strings.Contains(strings.ToLower(c.Name), lq) &&
-				!strings.Contains(strings.ToLower(c.Address), lq) &&
-				!anyContains(c.Types, lq) {
-				continue
-			}
-		}
-		out = append(out, c)
-	}
-
-	// เรียงระยะทางใกล้ไปไกล
-	sort.Slice(out, func(i, j int) bool { return out[i].DistanceM < out[j].DistanceM })
-
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(out)
+	httpx.Paginate(w, items, p)
 }
 
-func contains(arr []string, v string) bool {
-	for _, s := range arr {
-		if strings.EqualFold(s, v) {
-			return true
-		}
+func (h *Handler) list(w http.ResponseWriter, r *http.Request) {
+	p := httpx.ParsePagination(r)
+	items, err := h.Svc.List(r.Context(), false, p.Limit, p.Offset)
+	if err != nil {
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
 	}
-	return false
+	httpx.Paginate(w, items, p)
 }
 
-func anyContains(arr []string, needle string) bool {
-	needle = strings.ToLower(needle)
-	for _, s := range arr {
-		if strings.Contains(strings.ToLower(s), needle) {
-			return true
-		}
+func (h *Handler) listFavorites(w http.ResponseWriter, r *http.Request) {
+	p := httpx.ParsePagination(r)
+	items, err := h.Svc.List(r.Context(), true, p.Limit, p.Offset)
+	if err != nil {
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
 	}
-	return false
+	httpx.Paginate(w, items, p)
+}
+
+func (h *Handler) getByID(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	c, err := h.Svc.GetByID(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			httpx.JSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+			return
+		}
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	httpx.JSON(w, http.StatusOK, c)
+}
+
+func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth.UserIDFrom(r)
+	if !ok {
+		httpx.JSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	var p CreateContractorPayload
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
+		return
+	}
+	c, err := h.Svc.Create(r.Context(), userID, p)
+	if err != nil {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+		return
+	}
+	httpx.JSON(w, http.StatusCreated, c)
+}
+
+func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	var p UpdateContractorPayload
+	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
+		return
+	}
+	c, err := h.Svc.Update(r.Context(), id, p)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			httpx.JSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+			return
+		}
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	httpx.JSON(w, http.StatusOK, c)
+}
+
+func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if err := h.Svc.Delete(r.Context(), id); err != nil {
+		if errors.Is(err, ErrNotFound) {
+			httpx.JSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+			return
+		}
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) toggleFavorite(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	c, err := h.Svc.ToggleFavorite(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			httpx.JSON(w, http.StatusNotFound, map[string]string{"error": "not found"})
+			return
+		}
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	httpx.JSON(w, http.StatusOK, c)
 }

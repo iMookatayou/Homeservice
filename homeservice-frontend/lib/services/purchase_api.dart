@@ -158,8 +158,13 @@ class PurchaseApi {
     final form = FormData.fromMap({
       'file': await MultipartFile.fromFile(file.path, filename: filename),
     });
-    final resp = await _dio.post('/purchases/$id/attachments', data: form);
-    return _ok(resp, _parseOne);
+    // Upload file using files endpoint
+    final uploadResp = await _dio.post('/uploads', data: form);
+    final fileId = uploadResp.data['id'] as String;
+
+    // Link file to purchase
+    final linkResp = await _dio.post('/purchases/$id/attachments', data: {'file_id': fileId});
+    return _ok(linkResp, _parseOne);
   }
 
   /// DELETE /purchases/{id}/attachments/{file_id}

@@ -46,8 +46,8 @@ type Purchase struct {
 	Title           string    `json:"title" db:"title"`
 	Note            string    `json:"note,omitempty" db:"note"`
 	Items           Items     `json:"items,omitempty" db:"items"`
-	AmountEstimated float64   `json:"amount_estimated,omitempty" db:"amount_estimated"`
-	AmountPaid      float64   `json:"amount_paid,omitempty" db:"amount_paid"`
+	AmountEstimated *float64  `json:"amount_estimated,omitempty" db:"amount_estimated"`
+	AmountPaid      *float64  `json:"amount_paid,omitempty" db:"amount_paid"`
 	Currency        string    `json:"currency" db:"currency"`
 	Category        string    `json:"category,omitempty" db:"category"`
 	Store           string    `json:"store,omitempty" db:"store"`
@@ -57,4 +57,5 @@ type Purchase struct {
 	EditableUntil   time.Time `json:"editable_until" db:"editable_until"`
 	CreatedAt       time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
+	Attachments     []string  `json:"attachments,omitempty" db:"-"`
 }

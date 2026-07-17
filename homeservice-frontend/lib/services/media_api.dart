@@ -14,7 +14,7 @@ class MediaApi {
     required String displayName,
   }) async {
     final res = await dio.post(
-      '/api/v1/media/channels',
+      '/media/channels',
       data: {
         'source': source,
         'channel_id': channelId,
@@ -25,17 +25,17 @@ class MediaApi {
   }
 
   Future<List<MediaChannel>> getChannelList() async {
-    final res = await dio.get('/api/v1/media/channels');
+    final res = await dio.get('/media/channels');
     final data = (res.data as List).cast<Map<String, dynamic>>();
     return data.map(MediaChannel.fromJson).toList();
   }
 
   Future<void> deleteChannel(String channelUuid) async {
-    await dio.delete('/api/v1/media/channels/$channelUuid');
+    await dio.delete('/media/channels/$channelUuid');
   }
 
   // ===== Watch-scoped =====
-  static const _watchBase = '/api/v1/stock-watches';
+  static const _watchBase = '/stocks/watch';
 
   Future<void> subscribeChannel({
     required String watchId,

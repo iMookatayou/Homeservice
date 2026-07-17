@@ -1,0 +1,14 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Binary
+/api
+*.exe
+
+# Data
+/data/uploads
+
+# Go
+vendor/
