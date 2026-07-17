@@ -40,3 +40,18 @@ type UpdateContractorPayload struct {
 	GoogleMapsURL *string  `json:"google_maps_url,omitempty"`
 	Note          *string  `json:"note,omitempty"`
 }
+
+type SearchFilter struct {
+	Query  string
+	Type   string
+	Lat    *float64
+	Lng    *float64
+	Radius *float64
+	Limit  int
+	Offset int
+}
+
+type ContractorSearchResult struct {
+	Contractor
+	DistanceM *float64 `json:"distance_m,omitempty"`
+}

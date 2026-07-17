@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -42,6 +43,80 @@ func (r *Repo) List(ctx context.Context, onlyFavorites bool, limit, offset int) 
 			&c.ID, &c.Name, &c.Types, &c.Phone, &c.Address,
 			&c.Lat, &c.Lng, &c.GoogleMapsURL, &c.Note,
 			&c.IsFavorite, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		out = append(out, c)
+	}
+	return out, rows.Err()
+}
+
+func (r *Repo) Search(ctx context.Context, f SearchFilter) ([]ContractorSearchResult, error) {
+	var sb strings.Builder
+	var args []any
+	argIdx := 1
+
+	selectClause := `SELECT id, name, types, phone, address, lat, lng, google_maps_url, note, is_favorite, created_by, created_at, updated_at`
+	distanceClause := `, CAST(NULL AS FLOAT) as distance_m`
+
+	if f.Lat != nil && f.Lng != nil {
+		distanceClause = fmt.Sprintf(`, ( 6371000 * acos( cos( radians($%d) ) * cos( radians( lat ) ) * cos( radians( lng ) - radians($%d) ) + sin( radians($%d) ) * sin( radians( lat ) ) ) ) AS distance_m`, argIdx, argIdx+1, argIdx)
+		args = append(args, *f.Lat, *f.Lng)
+		argIdx += 2
+	}
+
+	sb.WriteString(selectClause)
+	sb.WriteString(distanceClause)
+	sb.WriteString(` FROM contractors WHERE 1=1`)
+
+	if f.Query != "" {
+		sb.WriteString(fmt.Sprintf(` AND (name ILIKE $%d OR address ILIKE $%d OR note ILIKE $%d)`, argIdx, argIdx, argIdx))
+		args = append(args, "%"+f.Query+"%")
+		argIdx++
+	}
+
+	if f.Type != "" {
+		sb.WriteString(fmt.Sprintf(` AND $%d = ANY(types)`, argIdx))
+		args = append(args, f.Type)
+		argIdx++
+	}
+
+	if f.Lat != nil && f.Lng != nil && f.Radius != nil && *f.Radius > 0 {
+		sb.WriteString(fmt.Sprintf(` AND lat IS NOT NULL AND lng IS NOT NULL AND ( 6371000 * acos( cos( radians($1) ) * cos( radians( lat ) ) * cos( radians( lng ) - radians($2) ) + sin( radians($1) ) * sin( radians( lat ) ) ) ) <= $%d`, argIdx))
+		args = append(args, *f.Radius)
+		argIdx++
+	}
+
+	if f.Lat != nil && f.Lng != nil {
+		sb.WriteString(` ORDER BY distance_m ASC`)
+	} else {
+		sb.WriteString(` ORDER BY is_favorite DESC, name ASC`)
+	}
+
+	limit := f.Limit
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	offset := f.Offset
+	if offset < 0 {
+		offset = 0
+	}
+	sb.WriteString(fmt.Sprintf(` LIMIT %d OFFSET %d`, limit, offset))
+
+	rows, err := r.DB.Query(ctx, sb.String(), args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var out []ContractorSearchResult
+	for rows.Next() {
+		var c ContractorSearchResult
+		if err := rows.Scan(
+			&c.ID, &c.Name, &c.Types, &c.Phone, &c.Address,
+			&c.Lat, &c.Lng, &c.GoogleMapsURL, &c.Note,
+			&c.IsFavorite, &c.CreatedBy, &c.CreatedAt, &c.UpdatedAt,
+			&c.DistanceM,
 		); err != nil {
 			return nil, err
 		}

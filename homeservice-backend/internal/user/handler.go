@@ -7,6 +7,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
+
 	"github.com/iMookatayou/homeservice-backend/internal/auth"
 	"github.com/iMookatayou/homeservice-backend/internal/httpx"
 )
@@ -43,7 +45,8 @@ func (h Handler) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tok, _ := auth.SignJWTWithRole(h.JWTSecret, u.ID, u.Email, u.Role, 24*time.Hour)
+	accessTok, _ := auth.SignJWTWithRole(h.JWTSecret, u.ID, u.Email, u.Role, 24*time.Hour)
+	refreshTok, _ := auth.SignJWTWithRole(h.JWTSecret, u.ID, u.Email, u.Role, 7*24*time.Hour)
 	httpx.JSON(w, http.StatusCreated, map[string]any{
 		"user": map[string]any{
 			"id":    u.ID,
@@ -51,8 +54,9 @@ func (h Handler) Register(w http.ResponseWriter, r *http.Request) {
 			"email": u.Email,
 			"role":  u.Role,
 		},
-		"access_token": tok,
-		"expires_in":   24 * 3600,
+		"access_token":  accessTok,
+		"refresh_token": refreshTok,
+		"expires_in":    24 * 3600,
 	})
 }
 
@@ -73,7 +77,8 @@ func (h Handler) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tok, _ := auth.SignJWTWithRole(h.JWTSecret, u.ID, u.Email, u.Role, 24*time.Hour)
+	accessTok, _ := auth.SignJWTWithRole(h.JWTSecret, u.ID, u.Email, u.Role, 24*time.Hour)
+	refreshTok, _ := auth.SignJWTWithRole(h.JWTSecret, u.ID, u.Email, u.Role, 7*24*time.Hour)
 	httpx.JSON(w, http.StatusCreated, map[string]any{
 		"user": map[string]any{
 			"id":    u.ID,
@@ -81,8 +86,52 @@ func (h Handler) Login(w http.ResponseWriter, r *http.Request) {
 			"email": u.Email,
 			"role":  u.Role,
 		},
-		"access_token": tok,
-		"expires_in":   24 * 3600,
+		"access_token":  accessTok,
+		"refresh_token": refreshTok,
+		"expires_in":    24 * 3600,
+	})
+}
+
+func (h Handler) Refresh(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		RefreshToken string `json:"refresh_token"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
+		return
+	}
+	if req.RefreshToken == "" {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "refresh_token required"})
+		return
+	}
+
+	claims := auth.NewClaims()
+	parser := jwt.NewParser(
+		jwt.WithValidMethods([]string{"HS256", "HS384", "HS512"}),
+		jwt.WithLeeway(60*time.Second),
+	)
+	token, err := parser.ParseWithClaims(req.RefreshToken, claims, func(t *jwt.Token) (interface{}, error) {
+		return []byte(h.JWTSecret), nil
+	})
+	if err != nil || !token.Valid {
+		httpx.JSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid refresh token"})
+		return
+	}
+
+	// Verify user still exists
+	u, err := h.Repo.ByID(r.Context(), claims.UserID)
+	if err != nil {
+		httpx.JSON(w, http.StatusUnauthorized, map[string]string{"error": "user not found"})
+		return
+	}
+
+	accessTok, _ := auth.SignJWTWithRole(h.JWTSecret, u.ID, u.Email, u.Role, 24*time.Hour)
+	refreshTok, _ := auth.SignJWTWithRole(h.JWTSecret, u.ID, u.Email, u.Role, 7*24*time.Hour)
+
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"access_token":  accessTok,
+		"refresh_token": refreshTok,
+		"expires_in":    24 * 3600,
 	})
 }
 

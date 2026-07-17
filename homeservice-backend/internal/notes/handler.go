@@ -52,7 +52,15 @@ func (h Handler) list(w http.ResponseWriter, r *http.Request) {
 		pinned = &v
 	}
 	var done *bool
-	if d := r.URL.Query().Get("done"); d != "" {
+	if st := r.URL.Query().Get("status"); st != "" {
+		if strings.EqualFold(st, "done") {
+			v := true
+			done = &v
+		} else if strings.EqualFold(st, "active") {
+			v := false
+			done = &v
+		}
+	} else if d := r.URL.Query().Get("done"); d != "" {
 		v := d == "1" || strings.EqualFold(d, "true")
 		done = &v
 	}

@@ -24,6 +24,11 @@ func (h Handler) RegisterRoutes(r chi.Router) {
 		r.Post("/{id}/claim", h.claim)
 		r.Post("/{id}/progress", h.progress)
 		r.Post("/{id}/cancel", h.cancel)
+
+		r.Route("/{id}/attachments", func(r chi.Router) {
+			r.Post("/", h.linkAttachment)
+			r.Delete("/{file_id}", h.unlinkAttachment)
+		})
 	})
 }
 
@@ -206,6 +211,67 @@ func (h Handler) cancel(w http.ResponseWriter, r *http.Request) {
 			httpx.JSON(w, http.StatusConflict, map[string]string{"error": "cannot cancel"})
 			return
 		}
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	httpx.JSON(w, http.StatusOK, p)
+}
+
+func (h Handler) linkAttachment(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserIDFrom(r)
+	if !ok {
+		httpx.JSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	var in struct {
+		FileID string `json:"file_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
+		return
+	}
+	if in.FileID == "" {
+		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "file_id is required"})
+		return
+	}
+
+	id := chi.URLParam(r, "id")
+	if err := h.Svc.LinkAttachment(r.Context(), uid, id, in.FileID); err != nil {
+		if errors.Is(err, ErrForbidden) {
+			httpx.JSON(w, http.StatusForbidden, map[string]string{"error": "forbidden"})
+			return
+		}
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	
+	p, err := h.Svc.Get(r.Context(), id)
+	if err != nil {
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	httpx.JSON(w, http.StatusCreated, p)
+}
+
+func (h Handler) unlinkAttachment(w http.ResponseWriter, r *http.Request) {
+	uid, ok := auth.UserIDFrom(r)
+	if !ok {
+		httpx.JSON(w, http.StatusUnauthorized, map[string]string{"error": "unauthorized"})
+		return
+	}
+	
+	id := chi.URLParam(r, "id")
+	if err := h.Svc.UnlinkAttachment(r.Context(), uid, id, chi.URLParam(r, "file_id")); err != nil {
+		if errors.Is(err, ErrForbidden) {
+			httpx.JSON(w, http.StatusForbidden, map[string]string{"error": "forbidden"})
+			return
+		}
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	
+	p, err := h.Svc.Get(r.Context(), id)
+	if err != nil {
 		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}

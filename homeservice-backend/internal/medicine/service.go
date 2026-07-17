@@ -15,6 +15,17 @@ func NewService(repo *Repo) *Service {
 	return &Service{Repo: repo, Now: time.Now}
 }
 
+func parseDate(s *string) (*time.Time, error) {
+	if s == nil || *s == "" {
+		return nil, nil
+	}
+	t, err := time.Parse("2006-01-02", *s)
+	if err != nil {
+		return nil, errors.New("invalid date format, expected YYYY-MM-DD")
+	}
+	return &t, nil
+}
+
 func (s *Service) ListItems(ctx context.Context, f ListItemFilter) ([]MedicineItem, error) {
 	return s.Repo.List(ctx, f)
 }
@@ -31,13 +42,17 @@ func (s *Service) CreateItem(ctx context.Context, p CreateItemPayload) (*Medicin
 	if location == nil {
 		location = p.LocationID
 	}
+	ed, err := parseDate(p.ExpiryDate)
+	if err != nil {
+		return nil, err
+	}
 	it := &MedicineItem{
 		Name:       p.Name,
 		Form:       p.Form,
 		Unit:       p.Unit,
 		Category:   p.Category,
 		StockQty:   p.StockQty,
-		ExpiryDate: p.ExpiryDate,
+		ExpiryDate: ed,
 		Location:   location,
 		Note:       p.Note,
 	}
@@ -48,7 +63,11 @@ func (s *Service) CreateItem(ctx context.Context, p CreateItemPayload) (*Medicin
 }
 
 func (s *Service) UpdateItem(ctx context.Context, id string, p UpdateItemPayload) (*MedicineItem, error) {
-	return s.Repo.Update(ctx, id, p)
+	ed, err := parseDate(p.ExpiryDate)
+	if err != nil {
+		return nil, err
+	}
+	return s.Repo.Update(ctx, id, p, ed)
 }
 
 func (s *Service) DeleteItem(ctx context.Context, id string) error {

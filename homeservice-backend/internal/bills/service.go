@@ -18,8 +18,8 @@ func (s Service) CreateBill(ctx context.Context, userID string, p CreateBillPayl
 	return s.repo.CreateBill(ctx, userID, p)
 }
 
-func (s Service) ListBills(ctx context.Context, limit, offset int) ([]Bill, error) {
-	return s.repo.ListBills(ctx, limit, offset)
+func (s Service) ListBills(ctx context.Context, q, status string, limit, offset int) ([]Bill, error) {
+	return s.repo.ListBills(ctx, q, status, limit, offset)
 }
 
 func (s Service) UpdateBill(ctx context.Context, id string, p UpdateBillPayload) (*Bill, error) {

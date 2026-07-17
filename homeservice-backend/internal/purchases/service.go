@@ -187,3 +187,25 @@ func (s *Service) Progress(ctx context.Context, uid, id string, in ProgressPaylo
 	}
 	return p, nil
 }
+
+func (s *Service) LinkAttachment(ctx context.Context, uid, id, fileID string) error {
+	p, err := s.Repo.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	if p.RequesterID != uid && p.BuyerID != uid {
+		return ErrForbidden
+	}
+	return s.Repo.LinkAttachment(ctx, id, fileID)
+}
+
+func (s *Service) UnlinkAttachment(ctx context.Context, uid, id, fileID string) error {
+	p, err := s.Repo.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	if p.RequesterID != uid && p.BuyerID != uid {
+		return ErrForbidden
+	}
+	return s.Repo.UnlinkAttachment(ctx, id, fileID)
+}

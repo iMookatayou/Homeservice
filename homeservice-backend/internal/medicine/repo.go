@@ -75,7 +75,7 @@ func (r *Repo) Create(ctx context.Context, it *MedicineItem) error {
 		Scan(&it.ID, &it.CreatedAt, &it.UpdatedAt)
 }
 
-func (r *Repo) Update(ctx context.Context, id string, p UpdateItemPayload) (*MedicineItem, error) {
+func (r *Repo) Update(ctx context.Context, id string, p UpdateItemPayload, ed *time.Time) (*MedicineItem, error) {
 	it, err := r.GetByID(ctx, id)
 	if err != nil {
 		return nil, err
@@ -96,8 +96,10 @@ func (r *Repo) Update(ctx context.Context, id string, p UpdateItemPayload) (*Med
 	if p.StockQty != nil {
 		it.StockQty = *p.StockQty
 	}
-	if p.ExpiryDate != nil {
-		it.ExpiryDate = p.ExpiryDate
+	if ed != nil {
+		it.ExpiryDate = ed
+	} else if p.ExpiryDate != nil && *p.ExpiryDate == "" {
+		it.ExpiryDate = nil
 	}
 	if p.Location != nil {
 		it.Location = p.Location
@@ -298,4 +300,23 @@ func (r *Repo) UpdateExpiry(ctx context.Context, id string, expiry *time.Time) (
 		return nil, err
 	}
 	return &it, nil
+}
+
+// Locations
+func (r *Repo) ListLocations(ctx context.Context) ([]map[string]string, error) {
+	rows, err := r.DB.Query(ctx, `SELECT DISTINCT location FROM medicine_items WHERE location IS NOT NULL AND location != '' ORDER BY location ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var locs []map[string]string
+	for rows.Next() {
+		var loc string
+		if err := rows.Scan(&loc); err != nil {
+			return nil, err
+		}
+		locs = append(locs, map[string]string{"id": loc, "name": loc})
+	}
+	return locs, rows.Err()
 }

@@ -85,6 +85,7 @@ func main() {
 		// Public
 		api.Post("/auth/register", uHandler.Register)
 		api.Post("/auth/login", uHandler.Login)
+		api.Post("/auth/refresh", uHandler.Refresh)
 		api.Post("/auth/forgot-password", uHandler.ForgotPassword)
 		api.Post("/auth/reset-password", uHandler.ResetPassword)
 

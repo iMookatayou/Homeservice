@@ -27,7 +27,9 @@ func (h Handler) RegisterRoutes(r chi.Router) {
 
 func (h Handler) list(w http.ResponseWriter, r *http.Request) {
 	p := httpx.ParsePagination(r)
-	list, err := h.Svc.ListBills(r.Context(), p.Limit, p.Offset)
+	q := r.URL.Query().Get("q")
+	status := r.URL.Query().Get("status")
+	list, err := h.Svc.ListBills(r.Context(), q, status, p.Limit, p.Offset)
 	if err != nil {
 		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return

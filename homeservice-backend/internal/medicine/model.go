@@ -30,7 +30,7 @@ type CreateItemPayload struct {
 	Unit       *string    `json:"unit,omitempty"`
 	Category   *string    `json:"category,omitempty"`
 	StockQty   float64    `json:"stock_qty"`
-	ExpiryDate *time.Time `json:"expiry_date,omitempty"`
+	ExpiryDate *string    `json:"expiry_date,omitempty"`
 	Location   *string    `json:"location,omitempty"`
 	LocationID *string    `json:"location_id,omitempty"`
 	Note       *string    `json:"note,omitempty"`
@@ -42,7 +42,7 @@ type UpdateItemPayload struct {
 	Unit       *string    `json:"unit,omitempty"`
 	Category   *string    `json:"category,omitempty"`
 	StockQty   *float64   `json:"stock_qty,omitempty"`
-	ExpiryDate *time.Time `json:"expiry_date,omitempty"`
+	ExpiryDate *string    `json:"expiry_date,omitempty"`
 	Location   *string    `json:"location,omitempty"`
 	Note       *string    `json:"note,omitempty"`
 }

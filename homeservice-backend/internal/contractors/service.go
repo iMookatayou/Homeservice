@@ -17,6 +17,10 @@ func (s *Service) List(ctx context.Context, onlyFavorites bool, limit, offset in
 	return s.Repo.List(ctx, onlyFavorites, limit, offset)
 }
 
+func (s *Service) Search(ctx context.Context, f SearchFilter) ([]ContractorSearchResult, error) {
+	return s.Repo.Search(ctx, f)
+}
+
 func (s *Service) GetByID(ctx context.Context, id string) (*Contractor, error) {
 	return s.Repo.GetByID(ctx, id)
 }

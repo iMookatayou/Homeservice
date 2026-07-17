@@ -57,4 +57,5 @@ type Purchase struct {
 	EditableUntil   time.Time `json:"editable_until" db:"editable_until"`
 	CreatedAt       time.Time `json:"created_at" db:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at" db:"updated_at"`
+	Attachments     []string  `json:"attachments,omitempty" db:"-"`
 }

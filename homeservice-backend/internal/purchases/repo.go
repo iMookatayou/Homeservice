@@ -50,7 +50,8 @@ func jsonBytes(v any) []byte {
 const selectCols = `
   id, title, note, items, amount_estimated, amount_paid,
   currency, category, store, status, requester_id, buyer_id,
-  editable_until, created_at, updated_at
+  editable_until, created_at, updated_at,
+  COALESCE((SELECT array_agg(file_id::text) FROM purchase_attachments WHERE purchase_id = purchases.id), '{}') as attachments
 `
 
 func scanPurchase(row pgx.Row) (*Purchase, error) {
@@ -60,7 +61,7 @@ func scanPurchase(row pgx.Row) (*Purchase, error) {
 		&p.AmountEstimated, &p.AmountPaid,
 		&p.Currency, &p.Category, &p.Store,
 		&p.Status, &p.RequesterID, &p.BuyerID,
-		&p.EditableUntil, &p.CreatedAt, &p.UpdatedAt,
+		&p.EditableUntil, &p.CreatedAt, &p.UpdatedAt, &p.Attachments,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, ErrNotFound
@@ -127,7 +128,7 @@ func (r *repo) List(ctx context.Context, f ListFilter) ([]Purchase, error) {
 			&p.AmountEstimated, &p.AmountPaid,
 			&p.Currency, &p.Category, &p.Store,
 			&p.Status, &p.RequesterID, &p.BuyerID,
-			&p.EditableUntil, &p.CreatedAt, &p.UpdatedAt,
+			&p.EditableUntil, &p.CreatedAt, &p.UpdatedAt, &p.Attachments,
 		); err != nil {
 			return nil, err
 		}
@@ -154,7 +155,9 @@ func (r *repo) Create(ctx context.Context, p *Purchase) error {
 		  title, note, items, amount_estimated, amount_paid, currency,
 		  category, store, status, requester_id, buyer_id
 		) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
-		RETURNING `+selectCols,
+		RETURNING id, title, note, items, amount_estimated, amount_paid,
+		currency, category, store, status, requester_id, buyer_id,
+		editable_until, created_at, updated_at, '{}'::text[] as attachments`,
 		p.Title, p.Note, jsonBytes(p.Items),
 		p.AmountEstimated, p.AmountPaid, p.Currency,
 		p.Category, p.Store, p.Status, p.RequesterID, p.BuyerID,

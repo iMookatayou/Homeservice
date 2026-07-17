@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/iMookatayou/homeservice-backend/internal/auth"
@@ -34,12 +35,36 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 
 func (h *Handler) search(w http.ResponseWriter, r *http.Request) {
 	p := httpx.ParsePagination(r)
-	items, err := h.Svc.List(r.Context(), false, p.Limit, p.Offset)
+	
+	f := SearchFilter{
+		Query:  r.URL.Query().Get("q"),
+		Type:   r.URL.Query().Get("type"),
+		Limit:  p.Limit,
+		Offset: p.Offset,
+	}
+	
+	if latStr := r.URL.Query().Get("lat"); latStr != "" {
+		if lat, err := strconv.ParseFloat(latStr, 64); err == nil {
+			f.Lat = &lat
+		}
+	}
+	if lngStr := r.URL.Query().Get("lng"); lngStr != "" {
+		if lng, err := strconv.ParseFloat(lngStr, 64); err == nil {
+			f.Lng = &lng
+		}
+	}
+	if radStr := r.URL.Query().Get("radius"); radStr != "" {
+		if rad, err := strconv.ParseFloat(radStr, 64); err == nil {
+			f.Radius = &rad
+		}
+	}
+
+	items, err := h.Svc.Search(r.Context(), f)
 	if err != nil {
 		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 		return
 	}
-	httpx.JSON(w, http.StatusOK, items)
+	httpx.Paginate(w, items, p)
 }
 
 func (h *Handler) list(w http.ResponseWriter, r *http.Request) {

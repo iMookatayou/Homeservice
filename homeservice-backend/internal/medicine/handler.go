@@ -73,11 +73,11 @@ func (h *Handler) getByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.JSON(w, http.StatusOK, map[string]any{
-		"item":        it,
-		"batches":     []any{},
-		"alert":       alert,
-		"next_expiry": it.ExpiryDate,
-		"updated_at":  it.UpdatedAt,
+		"item":             it,
+		"batches":          []any{},
+		"alert":            alert,
+		"next_expiry_date": it.ExpiryDate,
+		"updated_at":       it.UpdatedAt,
 	})
 }
 
@@ -151,8 +151,8 @@ func (h *Handler) adjustStock(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) txnIn(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	var p struct {
-		Qty        float64    `json:"qty"`
-		ExpiryDate *time.Time `json:"expiry_date,omitempty"`
+		Qty        float64 `json:"qty"`
+		ExpiryDate *string `json:"expiry_date,omitempty"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
 		httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
@@ -167,8 +167,19 @@ func (h *Handler) txnIn(w http.ResponseWriter, r *http.Request) {
 		h.writeMedicineErr(w, err)
 		return
 	}
-	if p.ExpiryDate != nil {
-		it, err = h.Svc.Repo.UpdateExpiry(r.Context(), id, p.ExpiryDate)
+	if p.ExpiryDate != nil && *p.ExpiryDate != "" {
+		t, err := time.Parse("2006-01-02", *p.ExpiryDate)
+		if err != nil {
+			httpx.JSON(w, http.StatusBadRequest, map[string]string{"error": "invalid date format, expected YYYY-MM-DD"})
+			return
+		}
+		it, err = h.Svc.Repo.UpdateExpiry(r.Context(), id, &t)
+		if err != nil {
+			h.writeMedicineErr(w, err)
+			return
+		}
+	} else if p.ExpiryDate != nil && *p.ExpiryDate == "" {
+		it, err = h.Svc.Repo.UpdateExpiry(r.Context(), id, nil)
 		if err != nil {
 			h.writeMedicineErr(w, err)
 			return
@@ -244,7 +255,15 @@ func (h *Handler) upsertAlert(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) listLocations(w http.ResponseWriter, r *http.Request) {
-	httpx.JSON(w, http.StatusOK, []any{})
+	locs, err := h.Svc.Repo.ListLocations(r.Context())
+	if err != nil {
+		httpx.JSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	if locs == nil {
+		locs = []map[string]string{}
+	}
+	httpx.JSON(w, http.StatusOK, locs)
 }
 
 func (h *Handler) listLowStock(w http.ResponseWriter, r *http.Request) {
@@ -291,11 +310,11 @@ func (h *Handler) summaryList(r *http.Request, items []MedicineItem) []map[strin
 			}
 		}
 		out = append(out, map[string]any{
-			"item":        it,
-			"total_qty":   it.StockQty,
-			"next_expiry": it.ExpiryDate,
-			"low_stock":   lowStock,
-			"expiring":    expiring,
+			"item":             it,
+			"total_qty":        it.StockQty,
+			"next_expiry_date": it.ExpiryDate,
+			"low_stock":        lowStock,
+			"expiring":         expiring,
 		})
 	}
 	return out
