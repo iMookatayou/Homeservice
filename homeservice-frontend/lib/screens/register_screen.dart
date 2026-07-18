@@ -31,7 +31,6 @@ class _RegisterState extends ConsumerState<RegisterScreen> {
 
   // ====== Palette: Deep Blue on White (same as Login) ======
   static const _primary = Color(0xFF1E3A8A); // deep indigo/blue
-  static const _primarySoft = Color(0xFF2563EB); // accent blue
   static const _bgSoft = Color(0xFFF3F6FF); // very light blue background
   static const _card = Colors.white;
   static const _textMain = Color(0xFF0B1220); // near-navy

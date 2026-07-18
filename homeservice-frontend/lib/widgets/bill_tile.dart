@@ -66,7 +66,7 @@ class BillTile extends StatelessWidget {
     );
     final d = due.difference(today).inDays;
 
-    final chipBg = (_isPaid ? _green : _red).withOpacity(0.12);
+    final chipBg = (_isPaid ? _green : _red).withValues(alpha: 0.12);
     final chipFg = _isPaid ? _green : _red;
 
     return InkWell(
@@ -133,7 +133,7 @@ class BillTile extends StatelessWidget {
                                 color: chipBg,
                                 borderRadius: BorderRadius.circular(999),
                                 border: Border.all(
-                                  color: chipFg.withOpacity(0.35),
+                                  color: chipFg.withValues(alpha: 0.35),
                                 ),
                               ),
                               child: Row(

@@ -110,7 +110,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
-                      side: BorderSide(color: Colors.black.withOpacity(.06)),
+                      side: BorderSide(color: Colors.black.withValues(alpha: .06)),
                     ),
                     child: Padding(
                       padding: const EdgeInsets.all(10),
@@ -328,16 +328,16 @@ class _PurchaseCard extends StatelessWidget {
     final cs = Theme.of(ctx).colorScheme;
     switch (p.status) {
       case PurchaseStatus.planned:
-        return cs.surfaceVariant;
+        return cs.surfaceContainerHighest;
       case PurchaseStatus.ordered:
-        return Colors.blue.withOpacity(.12);
+        return Colors.blue.withValues(alpha: .12);
       case PurchaseStatus.bought:
-        return Colors.amber.withOpacity(.16);
+        return Colors.amber.withValues(alpha: .16);
       case PurchaseStatus.delivered:
-        return Colors.green.withOpacity(.16);
+        return Colors.green.withValues(alpha: .16);
       case PurchaseStatus.canceled:
       case PurchaseStatus.cancelled:
-        return Colors.red.withOpacity(.14);
+        return Colors.red.withValues(alpha: .14);
     }
   }
 
@@ -391,14 +391,14 @@ class _PurchaseCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(12),
       onTap: () {
         final id = p.id;
-        if (id != null) context.push('/purchases/$id');
+        context.push('/purchases/$id');
       },
       child: Card(
         elevation: 0,
         margin: const EdgeInsets.symmetric(horizontal: 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: Colors.black.withOpacity(0.06)),
+          side: BorderSide(color: Colors.black.withValues(alpha: 0.06)),
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
@@ -495,7 +495,7 @@ class _TinyChip extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFFF3F4F6),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.black.withOpacity(0.04)),
+        border: Border.all(color: Colors.black.withValues(alpha: 0.04)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,

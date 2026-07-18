@@ -21,10 +21,6 @@ import 'models/bill.dart';
 import 'screens/medicine_screen.dart';
 import 'screens/medicine_form_screen.dart';
 import 'screens/medicine_detail_screen.dart';
-import 'screens/stocks_watchlist_screen.dart';
-import 'screens/stock_detail_screen.dart';
-import 'screens/stock_media_screen.dart';
-
 class GoRouterRefreshNotifier extends ChangeNotifier {
   GoRouterRefreshNotifier(this.ref) {
     _sub = ref.listen<AuthState>(authProvider, (_, __) => notifyListeners());
@@ -104,26 +100,6 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
             path: ':id',
             builder: (_, st) => MedicineDetailScreen(id: st.pathParameters['id']!),
-          ),
-        ],
-      ),
-
-      // Stocks
-      GoRoute(
-        path: '/stocks',
-        builder: (_, __) => const StocksWatchlistScreen(),
-        routes: [
-          GoRoute(
-            path: ':watchId',
-            builder: (_, st) =>
-                StockDetailScreen(watchId: st.pathParameters['watchId']!),
-            routes: [
-              GoRoute(
-                path: 'media',
-                builder: (_, st) =>
-                    StockMediaScreen(watchId: st.pathParameters['watchId']!),
-              ),
-            ],
           ),
         ],
       ),

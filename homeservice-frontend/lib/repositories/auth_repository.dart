@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../models/user.dart';
 import '../services/api_client.dart';
 import '../services/token_storage.dart';
@@ -8,9 +10,9 @@ class AuthRepository {
   final ApiClient _api;
   final TokenStorage _storage;
 
-  AuthRepository({required TokenStorage storage})
+  AuthRepository({required TokenStorage storage, required Ref ref})
       : _storage = storage,
-        _api = ApiClient(tokenStorage: storage);
+        _api = ApiClient(tokenStorage: storage, ref: ref);
 
   Future<String?> currentToken() => _storage.getAccessToken();
 
@@ -47,7 +49,8 @@ class AuthRepository {
       );
     }
 
-    await _storage.saveTokens(token, null);
+    final refreshToken = _pickRefreshToken(data);
+    await _storage.saveTokens(token, refreshToken);
 
     final user = _parseUser(data);
     return (token, user);
@@ -66,8 +69,9 @@ class AuthRepository {
     final data = (res.data as Map).cast<String, dynamic>();
     final token = _pickAccessToken(data);
 
+    final refreshToken = _pickRefreshToken(data);
     if (token != null && token.isNotEmpty) {
-      await _storage.saveTokens(token, null);
+      await _storage.saveTokens(token, refreshToken);
     }
 
     final user = _parseUser(data);
@@ -102,6 +106,19 @@ class AuthRepository {
     final tokens = data['tokens'];
     if (tokens is Map) {
       final nested = tokens['access_token'] ?? tokens['token'];
+      if (nested is String && nested.isNotEmpty) return nested;
+    }
+
+    return null;
+  }
+
+  String? _pickRefreshToken(Map<String, dynamic> data) {
+    final root = data['refresh_token'] ?? data['token_refresh'];
+    if (root is String && root.isNotEmpty) return root;
+
+    final tokens = data['tokens'];
+    if (tokens is Map) {
+      final nested = tokens['refresh_token'];
       if (nested is String && nested.isNotEmpty) return nested;
     }
 

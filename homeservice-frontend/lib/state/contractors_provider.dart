@@ -107,8 +107,10 @@ final currentLatLngProvider = FutureProvider<({double lat, double lng})>((
   // 2) current fix (แม่น, timeLimit กันค้าง)
   try {
     final pos = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
-      timeLimit: const Duration(seconds: 5),
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 5),
+      ),
     );
     return (lat: pos.latitude, lng: pos.longitude);
   } on TimeoutException {

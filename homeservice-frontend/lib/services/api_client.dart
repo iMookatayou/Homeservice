@@ -4,12 +4,13 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'token_storage.dart';
+import 'auth_interceptor.dart';
 
 class ApiClient {
   final Dio dio;
   final TokenStorage tokenStorage;
 
-  ApiClient({Dio? dio, required this.tokenStorage})
+  ApiClient({Dio? dio, required this.tokenStorage, required Ref ref})
       : dio = dio ??
             Dio(
               BaseOptions(
@@ -25,21 +26,7 @@ class ApiClient {
               ),
             ) {
     this.dio.interceptors.add(
-      InterceptorsWrapper(
-        onRequest: (options, handler) async {
-          final token = await tokenStorage.getAccessToken();
-          if (token != null && token.isNotEmpty) {
-            options.headers['Authorization'] = 'Bearer $token';
-          }
-          handler.next(options);
-        },
-        onError: (err, handler) async {
-          if (err.response?.statusCode == 401) {
-            await tokenStorage.clear();
-          }
-          handler.next(err);
-        },
-      ),
+      AuthInterceptor(storage: tokenStorage, ref: ref),
     );
 
     if (kDebugMode) {
@@ -160,5 +147,5 @@ final tokenStorageProvider = Provider<TokenStorage>((ref) => TokenStorage());
 
 final apiClientProvider = Provider<ApiClient>((ref) {
   final ts = ref.read(tokenStorageProvider);
-  return ApiClient(tokenStorage: ts);
+  return ApiClient(tokenStorage: ts, ref: ref);
 });

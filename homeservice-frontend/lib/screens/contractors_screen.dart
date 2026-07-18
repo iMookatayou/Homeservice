@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart'; // kReleaseMode (ถ้าจะใช้ logic เพิ่มภายหลัง)
+// kReleaseMode (ถ้าจะใช้ logic เพิ่มภายหลัง)
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';

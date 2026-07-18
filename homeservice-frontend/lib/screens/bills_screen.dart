@@ -177,7 +177,7 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
                   }
                   return RefreshIndicator.adaptive(
                     onRefresh: () async {
-                      await ref.refresh(billsProvider.future);
+                      final _ = await ref.refresh(billsProvider.future);
                     },
                     child: ListView.separated(
                       physics: const AlwaysScrollableScrollPhysics(),
@@ -271,7 +271,7 @@ class _BillCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: bg ?? cs.surfaceVariant.withOpacity(0.6),
+        color: bg ?? cs.surfaceContainerHighest.withValues(alpha: 0.6),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: border ?? cs.outlineVariant),
       ),
@@ -292,7 +292,7 @@ class _BillCard extends StatelessWidget {
     final d = _daysDiff(bill.dueDate);
 
     final statusFg = _isPaid ? _green : _red;
-    final statusBg = statusFg.withOpacity(0.12);
+    final statusBg = statusFg.withValues(alpha: 0.12);
 
     return InkWell(
       onTap: onTap,
@@ -302,7 +302,7 @@ class _BillCard extends StatelessWidget {
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          side: BorderSide(color: Colors.black.withOpacity(0.06)),
+          side: BorderSide(color: Colors.black.withValues(alpha: 0.06)),
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
@@ -342,7 +342,7 @@ class _BillCard extends StatelessWidget {
                     context,
                     fg: statusFg,
                     bg: statusBg,
-                    border: statusFg.withOpacity(0.35),
+                    border: statusFg.withValues(alpha: 0.35),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [

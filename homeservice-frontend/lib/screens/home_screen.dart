@@ -17,7 +17,7 @@ class AppColors {
 }
 
 class _DotBadge extends StatelessWidget {
-  const _DotBadge({super.key});
+  const _DotBadge();
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -37,10 +37,6 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final auth = ref.watch(authProvider);
-    final user = auth.user;
-    final weather = ref.watch(currentWeatherProvider);
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
 
@@ -54,7 +50,7 @@ class HomeScreen extends ConsumerWidget {
           height: 40,
           width: 40,
           decoration: BoxDecoration(
-            color: AppColors.softBlue.withOpacity(.12),
+            color: AppColors.softBlue.withValues(alpha: .12),
             shape: BoxShape.circle,
             border: Border.all(color: AppColors.cardBorder),
           ),
@@ -111,7 +107,7 @@ class HomeScreen extends ConsumerWidget {
               title: 'Current Weather',
               subtitle: 'Local conditions',
               trailing: _AutoSyncChip(),
-              child: const _WeatherBodyProxy(),
+              child: _WeatherBodyProxy(),
             ),
             const SizedBox(height: 16),
             const _SectionCard(
@@ -127,80 +123,6 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class _WelcomeHeader extends StatelessWidget {
-  const _WelcomeHeader({this.name});
-  final String? name;
-
-  @override
-  Widget build(BuildContext context) {
-    final now = DateFormat('EEE, MMM d • HH:mm').format(DateTime.now());
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Colors.white, Color(0xFFF1F5FF)],
-        ),
-        border: Border.all(color: AppColors.cardBorder),
-      ),
-      padding: const EdgeInsets.all(18),
-      child: Row(
-        children: [
-          Container(
-            height: 52,
-            width: 52,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppColors.cardBorder),
-              boxShadow: const [
-                BoxShadow(
-                  blurRadius: 10,
-                  color: Color(0x14000000),
-                  offset: Offset(0, 4),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.person_pin,
-              size: 32,
-              color: AppColors.deepNavy,
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Welcome, ${name ?? "Guest"}',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: AppColors.deepNavy,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Ready to manage your home • $now',
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: AppColors.textMuted),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          const _PillChip(
-            icon: Icons.verified_user_outlined,
-            label: 'Secure',
-            color: AppColors.mint,
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _SectionCard extends StatelessWidget {
   const _SectionCard({
@@ -279,7 +201,7 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _AutoSyncChip extends ConsumerWidget {
-  const _AutoSyncChip({super.key});
+  const _AutoSyncChip();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return const _PillChip(
@@ -306,9 +228,9 @@ class _PillChip extends StatelessWidget {
       height: 30,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withOpacity(0.25)),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -328,7 +250,7 @@ class _PillChip extends StatelessWidget {
   }
 }
 
-/// proxy เพื่อดึง AsyncValue<WeatherNow> จาก provider
+// proxy เพื่อดึง AsyncValue<WeatherNow> จาก provider
 class _WeatherBodyProxy extends ConsumerWidget {
   const _WeatherBodyProxy();
 
@@ -626,7 +548,6 @@ class _LauncherSearch extends StatefulWidget {
   const _LauncherSearch({
     required this.hintText,
     required this.onSubmit,
-    super.key,
   });
   final String hintText;
   final void Function(String query) onSubmit;

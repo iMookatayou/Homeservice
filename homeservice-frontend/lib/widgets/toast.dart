@@ -49,7 +49,7 @@ class AppToast {
     _isShowing = true;
 
     final req = _queue.removeFirst();
-    final overlay = Overlay.of(req.context, rootOverlay: true);
+    final overlay = Overlay.maybeOf(req.context, rootOverlay: true);
     if (overlay == null) {
       _isShowing = false;
       _tryShowNext();
@@ -202,7 +202,7 @@ class _ToastEntryState extends State<_ToastEntry>
                             Container(
                               padding: const EdgeInsets.all(6),
                               decoration: BoxDecoration(
-                                color: tint.withOpacity(0.08),
+                                color: tint.withValues(alpha: 0.08),
                                 shape: BoxShape.circle,
                               ),
                               child: Icon(icon, size: 22, color: tint),

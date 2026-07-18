@@ -42,7 +42,7 @@ class AuthNotifier extends Notifier<AuthState> {
   @override
   AuthState build() {
     final storage = ref.read(tokenStorageProvider);
-    _repo = AuthRepository(storage: storage);
+    _repo = AuthRepository(storage: storage, ref: ref);
     return const AuthState(loading: true);
   }
 

@@ -94,7 +94,7 @@ class _SummaryCard extends StatelessWidget {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color: Colors.blueGrey.withOpacity(.12),
+                          color: Colors.blueGrey.withValues(alpha: .12),
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Text(
@@ -144,7 +144,7 @@ class _SummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(.10),
+        color: color.withValues(alpha: .10),
         borderRadius: BorderRadius.circular(10),
       ),
       child: RichText(
