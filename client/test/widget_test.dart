@@ -1,30 +1,29 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
+// Basic app-boot smoke test: with no stored session, the app should start
+// at the splash screen and land on the login screen once auth resolves to
+// "unauthenticated" (no valid token in secure storage in the test env).
 
-import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:homeservice/main.dart';
+import 'package:homeservice/screens/login_screen.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const HomeServiceApp());
+  testWidgets('App boots and redirects to login when unauthenticated', (
+    WidgetTester tester,
+  ) async {
+    // main() normally loads .env.development; do the same here so
+    // ApiClient/Env reads don't hit dotenv's NotInitializedError.
+    dotenv.loadFromString(envString: 'API_BASE_URL=http://127.0.0.1:8080/api/v1');
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    await tester.pumpWidget(
+      const ProviderScope(child: HomeServiceApp()),
+    );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    // Let the splash screen resolve the (non-existent) session and redirect.
+    await tester.pumpAndSettle();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.byType(LoginScreen), findsOneWidget);
   });
 }
