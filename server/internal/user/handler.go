@@ -3,6 +3,7 @@ package user
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -16,9 +17,6 @@ import (
 type Handler struct {
 	Repo      Repo
 	JWTSecret string
-}
-
-func (h Handler) RegisterRoutes(r interface{ Get(string, http.HandlerFunc); Post(string, http.HandlerFunc); Patch(string, http.HandlerFunc) }) {
 }
 
 func (h Handler) Register(w http.ResponseWriter, r *http.Request) {
@@ -252,8 +250,7 @@ func (h Handler) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: ส่ง email จริงๆ ตอนนี้ log token ไว้ก่อน
-	// log.Printf("reset token for %s: %s", req.Email, token)
-	_ = token
+	log.Printf("[dev] password reset token for %s: %s", req.Email, token)
 
 	httpx.JSON(w, http.StatusOK, map[string]string{"message": "if email exists, reset link will be sent"})}
 

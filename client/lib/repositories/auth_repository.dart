@@ -88,7 +88,7 @@ class AuthRepository {
   }
 
   Future<void> requestPasswordReset(String email) async {
-    throw UnsupportedError('Password reset endpoint is not available yet');
+    await _api.post('/auth/forgot-password', data: {'email': email});
   }
 
   User? _parseUser(Map<String, dynamic> data) {
