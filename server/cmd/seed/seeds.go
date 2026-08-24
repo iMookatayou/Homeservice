@@ -9,17 +9,21 @@ import (
 
 var adminID string
 
+// Seeded admin login: admin@home.local / DevPass123!
+// (bcrypt hash below was generated for that exact password — see internal/auth.HashPassword)
+const adminSeedPasswordHash = "$2a$10$9ATgBfFG/zfsBX6F4pcZH.h.gTPHtNAncrBZjiO8VNboYlNUTNs6G"
+
 func seedUsers(ctx context.Context, db *pgxpool.Pool) {
 	err := db.QueryRow(ctx, `
 		INSERT INTO users (name, email, password_hash, role)
-		VALUES ('Admin', 'admin@home.local', '$2a$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'admin')
-		ON CONFLICT (email) DO UPDATE SET role = 'admin'
+		VALUES ('Admin', 'admin@home.local', $1, 'admin')
+		ON CONFLICT (email) DO UPDATE SET role = 'admin', password_hash = $1
 		RETURNING id
-	`).Scan(&adminID)
+	`, adminSeedPasswordHash).Scan(&adminID)
 	if err != nil {
 		log.Fatalf("seedUsers: %v", err)
 	}
-	log.Printf("✅ users seeded (admin id: %s)", adminID)
+	log.Printf("✅ users seeded (admin id: %s, login: admin@home.local / DevPass123!)", adminID)
 }
 
 func seedNotes(ctx context.Context, db *pgxpool.Pool) {
