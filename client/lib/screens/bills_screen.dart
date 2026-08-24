@@ -9,6 +9,9 @@ import '../state/bills_provider.dart';
 import '../widgets/top_nav_bar.dart';
 import '../widgets/search_bar_field.dart';
 import '../widgets/header_row.dart';
+import '../widgets/list_empty_state.dart';
+import '../widgets/page_loading.dart';
+import '../widgets/error_state.dart';
 
 class BillsScreen extends ConsumerStatefulWidget {
   const BillsScreen({super.key});
@@ -135,44 +138,41 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
             Expanded(
               child: itemsAsync.when(
                 loading: () =>
-                    const Center(child: CircularProgressIndicator.adaptive()),
-                error: (e, _) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          color: Colors.redAccent,
-                          size: 48,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          e is FormatException ? e.message : e.toString(),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        FilledButton.icon(
-                          onPressed: () => ref.invalidate(billsProvider),
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('ลองอีกครั้ง'),
-                        ),
-                      ],
-                    ),
-                  ),
+                    const PageLoading(),
+                error: (e, _) => ErrorState(
+                  icon: Icons.error_outline,
+                  title: e is FormatException ? e.message : e.toString(),
+                  retryLabel: 'ลองอีกครั้ง',
+                  onRetry: () => ref.invalidate(billsProvider),
                 ),
                 data: (items) {
                   if (items.isEmpty) {
-                    return _EmptyState(
-                      onClear: () {
-                        _q.clear();
-                        ref.read(billsQueryProvider.notifier).clear();
-                        ref
-                            .read(billsStatusFilterProvider.notifier)
-                            .set(BillsStatusFilter.all);
-                      },
-                      onCreate: () => context.push('/bills/new'),
+                    return ListEmptyState(
+                      centered: true,
+                      icon: Icons.receipt_long,
+                      title: 'ยังไม่มีบิล',
+                      subtitle: 'เพิ่มบิลใหม่ หรือเคลียร์ตัวกรอง/คำค้นหา',
+                      action: Wrap(
+                        spacing: 8,
+                        children: [
+                          OutlinedButton.icon(
+                            onPressed: () {
+                              _q.clear();
+                              ref.read(billsQueryProvider.notifier).clear();
+                              ref
+                                  .read(billsStatusFilterProvider.notifier)
+                                  .set(BillsStatusFilter.all);
+                            },
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Clear filters'),
+                          ),
+                          FilledButton.icon(
+                            onPressed: () => context.push('/bills/new'),
+                            icon: const Icon(Icons.add),
+                            label: const Text('New Bill'),
+                          ),
+                        ],
+                      ),
                     );
                   }
                   return RefreshIndicator.adaptive(
@@ -404,52 +404,3 @@ class _BillCard extends StatelessWidget {
   }
 }
 
-/* -------------------------------- Empty state ------------------------------- */
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onClear, required this.onCreate});
-  final VoidCallback onClear;
-  final VoidCallback onCreate;
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.receipt_long, size: 48, color: cs.outline),
-            const SizedBox(height: 12),
-            Text('ยังไม่มีบิล', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 6),
-            Text(
-              'เพิ่มบิลใหม่ หรือเคลียร์ตัวกรอง/คำค้นหา',
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: [
-                OutlinedButton.icon(
-                  onPressed: onClear,
-                  icon: const Icon(Icons.refresh),
-                  label: const Text('Clear filters'),
-                ),
-                FilledButton.icon(
-                  onPressed: onCreate,
-                  icon: const Icon(Icons.add),
-                  label: const Text('New Bill'),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

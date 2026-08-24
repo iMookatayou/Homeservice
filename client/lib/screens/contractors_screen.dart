@@ -6,6 +6,8 @@ import 'package:geolocator/geolocator.dart';
 
 import '../state/contractors_provider.dart';
 import '../models/contractor.dart';
+import '../widgets/list_empty_state.dart';
+import '../widgets/page_loading.dart';
 
 class ContractorsScreen extends ConsumerStatefulWidget {
   const ContractorsScreen({super.key});
@@ -136,7 +138,7 @@ class _ContractorsScreenState extends ConsumerState<ContractorsScreen> {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: listAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const PageLoading(),
                 error: (e, _) => Center(
                   child: Text(
                     'เกิดข้อผิดพลาด: $e',
@@ -145,13 +147,20 @@ class _ContractorsScreenState extends ConsumerState<ContractorsScreen> {
                 ),
                 data: (list) {
                   if (list.isEmpty) {
-                    return _EmptyState(
-                      onExpand: () {
-                        ref
-                            .read(contractorFilterProvider.notifier)
-                            .setRadius(15000);
-                        ref.invalidate(contractorsListProvider);
-                      },
+                    return ListEmptyState(
+                      centered: true,
+                      icon: Icons.search_off,
+                      title: 'ไม่พบนายช่างในรัศมีที่เลือก',
+                      action: OutlinedButton.icon(
+                        icon: const Icon(Icons.expand_circle_down),
+                        label: const Text('ขยายรัศมีเป็น 15 กม.'),
+                        onPressed: () {
+                          ref
+                              .read(contractorFilterProvider.notifier)
+                              .setRadius(15000);
+                          ref.invalidate(contractorsListProvider);
+                        },
+                      ),
                     );
                   }
                   return ListView.separated(
@@ -217,31 +226,6 @@ class _LocationBanner extends StatelessWidget {
 
       // ถ้าได้พิกัดแล้ว: ไม่ต้องโชว์อะไร (ซ่อน banner)
       data: (_) => const SizedBox.shrink(),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({required this.onExpand});
-  final VoidCallback onExpand;
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.search_off, size: 48),
-          const SizedBox(height: 8),
-          const Text('ไม่พบนายช่างในรัศมีที่เลือก'),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            icon: const Icon(Icons.expand_circle_down),
-            label: const Text('ขยายรัศมีเป็น 15 กม.'),
-            onPressed: onExpand,
-          ),
-        ],
-      ),
     );
   }
 }

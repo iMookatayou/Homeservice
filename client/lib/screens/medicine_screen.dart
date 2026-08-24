@@ -10,6 +10,7 @@ import '../widgets/search_bar_field.dart';
 import '../widgets/last_updated_badge.dart';
 import '../widgets/error_state.dart';
 import '../widgets/list_empty_state.dart';
+import '../widgets/page_loading.dart';
 
 class MedicineScreen extends ConsumerStatefulWidget {
   const MedicineScreen({super.key});
@@ -105,7 +106,7 @@ class _MedicineScreenState extends ConsumerState<MedicineScreen> {
                     );
                   },
                   loading: () => const SliverFillRemaining(
-                    child: Center(child: CircularProgressIndicator()),
+                    child: PageLoading(),
                   ),
                   error: (e, st) => SliverFillRemaining(
                     hasScrollBody: false,

@@ -4,8 +4,17 @@ class ErrorState extends StatelessWidget {
   final String title;
   final Object? error;
   final VoidCallback? onRetry;
+  final IconData? icon;
+  final String retryLabel;
 
-  const ErrorState({super.key, required this.title, this.error, this.onRetry});
+  const ErrorState({
+    super.key,
+    required this.title,
+    this.error,
+    this.onRetry,
+    this.icon,
+    this.retryLabel = 'ลองใหม่',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +22,15 @@ class ErrorState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(title, style: Theme.of(context).textTheme.titleMedium),
+          if (icon != null) ...[
+            Icon(icon, size: 48, color: Colors.redAccent),
+            const SizedBox(height: 8),
+          ],
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium,
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 8),
           if (error != null)
             Text(
@@ -26,7 +43,7 @@ class ErrorState extends StatelessWidget {
             FilledButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
-              label: const Text('ลองใหม่'),
+              label: Text(retryLabel),
             ),
         ],
       ),

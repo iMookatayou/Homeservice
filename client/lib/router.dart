@@ -21,6 +21,7 @@ import 'models/bill.dart';
 import 'screens/medicine_screen.dart';
 import 'screens/medicine_form_screen.dart';
 import 'screens/medicine_detail_screen.dart';
+import 'screens/coming_soon_screen.dart';
 class GoRouterRefreshNotifier extends ChangeNotifier {
   GoRouterRefreshNotifier(this.ref) {
     _sub = ref.listen<AuthState>(authProvider, (_, __) => notifyListeners());
@@ -102,6 +103,30 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, st) => MedicineDetailScreen(id: st.pathParameters['id']!),
           ),
         ],
+      ),
+
+      // Not built yet — dashboard tiles link here so they don't hit a
+      // route-not-found error screen.
+      GoRoute(
+        path: '/cameras',
+        builder: (_, __) => const ComingSoonScreen(
+          title: 'Home Cameras',
+          icon: Icons.videocam_outlined,
+        ),
+      ),
+      GoRoute(
+        path: '/calc',
+        builder: (_, __) => const ComingSoonScreen(
+          title: 'Calculator',
+          icon: Icons.calculate,
+        ),
+      ),
+      GoRoute(
+        path: '/stocks',
+        builder: (_, __) => const ComingSoonScreen(
+          title: 'Household Stocks',
+          icon: Icons.trending_up,
+        ),
       ),
     ],
 

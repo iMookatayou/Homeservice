@@ -12,6 +12,7 @@ import '../widgets/alert_sheet.dart';
 import '../widgets/error_state.dart';
 import '../widgets/list_empty_state.dart';
 import '../widgets/last_updated_badge.dart';
+import '../widgets/page_loading.dart';
 
 class MedicineDetailScreen extends ConsumerStatefulWidget {
   final String id;
@@ -37,7 +38,7 @@ class _MedicineDetailScreenState extends ConsumerState<MedicineDetailScreen> {
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: asyncDetail.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
+          loading: () => const PageLoading(),
           error: (e, st) => ErrorState(
             title: 'โหลดข้อมูลไม่สำเร็จ',
             error: e,

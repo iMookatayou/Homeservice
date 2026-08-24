@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:phosphor_flutter/phosphor_flutter.dart';
 
 import '../state/auth_state.dart';
+import '../shared/app_colors.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -22,15 +22,6 @@ class _LoginState extends ConsumerState<LoginScreen> {
   bool _busy = false;
   bool _obscure = true;
   String? _error;
-
-  static const _primary = Color(0xFF1E3A8A);
-  static const _primarySoft = Color(0xFF2563EB);
-  static const _bgSoft = Color(0xFFF3F6FF);
-  static const _card = Colors.white;
-  static const _textMain = Color(0xFF0B1220);
-  static const _textSub = Color(0xFF475569);
-  static const _divider = Color(0xFFE5E7EB);
-  static const _fieldFill = Color(0xFFFFFFFF);
 
   @override
   void dispose() {
@@ -82,21 +73,21 @@ class _LoginState extends ConsumerState<LoginScreen> {
       labelText: label,
       prefixIcon: prefix,
       suffixIcon: suffix,
-      labelStyle: GoogleFonts.inter(color: _textSub),
+      labelStyle: GoogleFonts.inter(color: AppColors.textMuted),
       filled: true,
-      fillColor: _fieldFill,
+      fillColor: AppColors.fieldFill,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: _divider),
+        borderSide: const BorderSide(color: AppColors.divider),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: _divider),
+        borderSide: const BorderSide(color: AppColors.divider),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(16),
-        borderSide: const BorderSide(color: _primary, width: 1.4),
+        borderSide: const BorderSide(color: AppColors.softBlue, width: 1.4),
       ),
     );
   }
@@ -107,7 +98,7 @@ class _LoginState extends ConsumerState<LoginScreen> {
     final pad = w > 720 ? 28.0 : 18.0;
 
     return Scaffold(
-      backgroundColor: _bgSoft,
+      backgroundColor: AppColors.bgSoft,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -116,9 +107,9 @@ class _LoginState extends ConsumerState<LoginScreen> {
               constraints: const BoxConstraints(maxWidth: 480),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: _card,
+                  color: AppColors.card,
                   borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: _divider),
+                  border: Border.all(color: AppColors.divider),
                   boxShadow: const [
                     BoxShadow(
                       blurRadius: 30,
@@ -144,9 +135,9 @@ class _LoginState extends ConsumerState<LoginScreen> {
                             ),
                             alignment: Alignment.center,
                             child: const Icon(
-                              PhosphorIconsBold.house,
+                              Icons.home_rounded,
                               size: 34,
-                              color: _primary,
+                              color: AppColors.softBlue,
                             ),
                           ),
                           const SizedBox(height: 14),
@@ -155,7 +146,7 @@ class _LoginState extends ConsumerState<LoginScreen> {
                             style: GoogleFonts.inter(
                               fontSize: 24,
                               fontWeight: FontWeight.w800,
-                              color: _textMain,
+                              color: AppColors.textMain,
                               letterSpacing: -0.2,
                             ),
                           ),
@@ -165,7 +156,7 @@ class _LoginState extends ConsumerState<LoginScreen> {
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
                               fontSize: 13.5,
-                              color: _textSub,
+                              color: AppColors.textMuted,
                             ),
                           ),
                           const SizedBox(height: 18),
@@ -189,7 +180,7 @@ class _LoginState extends ConsumerState<LoginScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Icon(
-                                    PhosphorIconsFill.warningCircle,
+                                    Icons.error_rounded,
                                     size: 18,
                                     color: Color(0xFFDC2626),
                                   ),
@@ -223,7 +214,7 @@ class _LoginState extends ConsumerState<LoginScreen> {
                             decoration: _input(
                               'Email',
                               prefix: const Icon(
-                                PhosphorIconsBold.envelopeSimple,
+                                Icons.email_rounded,
                                 size: 20,
                               ),
                             ),
@@ -238,7 +229,7 @@ class _LoginState extends ConsumerState<LoginScreen> {
                             },
                             style: GoogleFonts.inter(
                               fontSize: 15,
-                              color: _textMain,
+                              color: AppColors.textMain,
                             ),
                           ),
 
@@ -255,7 +246,7 @@ class _LoginState extends ConsumerState<LoginScreen> {
                             decoration: _input(
                               'Password',
                               prefix: const Icon(
-                                PhosphorIconsBold.lockKey,
+                                Icons.lock_rounded,
                                 size: 20,
                               ),
                               suffix: IconButton(
@@ -268,10 +259,10 @@ class _LoginState extends ConsumerState<LoginScreen> {
                                           setState(() => _obscure = !_obscure),
                                 icon: Icon(
                                   _obscure
-                                      ? PhosphorIconsBold.eye
-                                      : PhosphorIconsBold.eyeSlash,
+                                      ? Icons.visibility_rounded
+                                      : Icons.visibility_off_rounded,
                                   size: 20,
-                                  color: _textSub,
+                                  color: AppColors.textMuted,
                                 ),
                               ),
                             ),
@@ -280,7 +271,7 @@ class _LoginState extends ConsumerState<LoginScreen> {
                                 : null,
                             style: GoogleFonts.inter(
                               fontSize: 15,
-                              color: _textMain,
+                              color: AppColors.textMain,
                             ),
                           ),
 
@@ -293,7 +284,7 @@ class _LoginState extends ConsumerState<LoginScreen> {
                                   ? null
                                   : () => context.go('/forgot'),
                               style: TextButton.styleFrom(
-                                foregroundColor: _primarySoft,
+                                foregroundColor: AppColors.softBlue,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
                                 ),
@@ -315,7 +306,7 @@ class _LoginState extends ConsumerState<LoginScreen> {
                             child: FilledButton(
                               onPressed: _busy ? null : _submit,
                               style: FilledButton.styleFrom(
-                                backgroundColor: _primary,
+                                backgroundColor: AppColors.softBlue,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
@@ -344,17 +335,17 @@ class _LoginState extends ConsumerState<LoginScreen> {
 
                           Row(
                             children: [
-                              const Expanded(child: Divider(color: _divider)),
+                              const Expanded(child: Divider(color: AppColors.divider)),
                               Padding(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 10,
                                 ),
                                 child: Text(
                                   'or',
-                                  style: GoogleFonts.inter(color: _textSub),
+                                  style: GoogleFonts.inter(color: AppColors.textMuted),
                                 ),
                               ),
-                              const Expanded(child: Divider(color: _divider)),
+                              const Expanded(child: Divider(color: AppColors.divider)),
                             ],
                           ),
 
@@ -368,7 +359,7 @@ class _LoginState extends ConsumerState<LoginScreen> {
                                   ? null
                                   : () => context.go('/register'),
                               icon: const Icon(
-                                PhosphorIconsBold.userPlus,
+                                Icons.person_add_rounded,
                                 size: 18,
                               ),
                               label: Text(
@@ -378,8 +369,8 @@ class _LoginState extends ConsumerState<LoginScreen> {
                                 ),
                               ),
                               style: OutlinedButton.styleFrom(
-                                foregroundColor: _primary,
-                                side: const BorderSide(color: _primary),
+                                foregroundColor: AppColors.softBlue,
+                                side: const BorderSide(color: AppColors.softBlue),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(14),
                                 ),
@@ -394,7 +385,7 @@ class _LoginState extends ConsumerState<LoginScreen> {
                             textAlign: TextAlign.center,
                             style: GoogleFonts.inter(
                               fontSize: 12.5,
-                              color: _textSub,
+                              color: AppColors.textMuted,
                             ),
                           ),
                         ],
