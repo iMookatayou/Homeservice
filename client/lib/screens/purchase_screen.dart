@@ -13,6 +13,7 @@ import '../widgets/top_nav_bar.dart';
 import '../widgets/search_bar_field.dart';
 import '../widgets/header_row.dart';
 import '../widgets/list_empty_state.dart';
+import '../widgets/page_loading.dart';
 
 enum _StatusFilter { all, planned, ordered, bought, delivered, canceled }
 
@@ -81,7 +82,7 @@ class _PurchaseScreenState extends ConsumerState<PurchaseScreen> {
         ),
         body: listAsync.when(
           loading: () =>
-              const Center(child: CircularProgressIndicator.adaptive()),
+              const PageLoading(),
           error: (e, _) => _ErrorOrAuth(e: e),
           data: (items) => Column(
             children: [

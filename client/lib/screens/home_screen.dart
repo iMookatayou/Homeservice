@@ -8,6 +8,7 @@ import '../state/weather_provider.dart';
 import '../models/weather.dart';
 import '../widgets/error_state.dart';
 import '../shared/app_colors.dart';
+import '../widgets/page_loading.dart';
 
 class _DotBadge extends StatelessWidget {
   const _DotBadge();
@@ -268,7 +269,7 @@ class _WeatherBody extends StatelessWidget {
     return weather.when(
       loading: () => const Padding(
         padding: EdgeInsets.symmetric(vertical: 20),
-        child: Center(child: CircularProgressIndicator()),
+        child: PageLoading(),
       ),
       error: (e, _) => ErrorState(
         icon: Icons.cloud_off,

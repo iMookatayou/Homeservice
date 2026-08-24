@@ -8,6 +8,7 @@ import '../state/purchase_providers.dart';
 import '../state/purchase_actions.dart';
 import '../models/purchase_model.dart';
 import '../widgets/error_state.dart';
+import '../widgets/page_loading.dart';
 
 class PurchaseDetailScreen extends ConsumerWidget {
   final String id;
@@ -20,7 +21,7 @@ class PurchaseDetailScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Purchase Detail')),
       body: asyncDetail.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
+        loading: () => const PageLoading(),
         error: (e, _) => ErrorState(
           title: 'โหลดไม่สำเร็จ: $e',
           icon: Icons.error_outline,

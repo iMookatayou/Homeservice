@@ -7,6 +7,7 @@ import 'package:geolocator/geolocator.dart';
 import '../state/contractors_provider.dart';
 import '../models/contractor.dart';
 import '../widgets/list_empty_state.dart';
+import '../widgets/page_loading.dart';
 
 class ContractorsScreen extends ConsumerStatefulWidget {
   const ContractorsScreen({super.key});
@@ -137,7 +138,7 @@ class _ContractorsScreenState extends ConsumerState<ContractorsScreen> {
             child: Padding(
               padding: const EdgeInsets.all(16),
               child: listAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
+                loading: () => const PageLoading(),
                 error: (e, _) => Center(
                   child: Text(
                     'เกิดข้อผิดพลาด: $e',

@@ -13,6 +13,7 @@ import '../repositories/notes_repository.dart';
 import '../widgets/top_nav_bar.dart';
 import '../widgets/header_row.dart';
 import '../widgets/error_state.dart';
+import '../widgets/page_loading.dart';
 
 class NotesScreen extends ConsumerStatefulWidget {
   const NotesScreen({super.key});
@@ -262,7 +263,7 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
       ),
       child: notes.when(
         loading: () =>
-            const Center(child: CircularProgressIndicator.adaptive()),
+            const PageLoading(),
         error: (e, _) => ErrorState(
           title: '$e',
           icon: Icons.error_outline,

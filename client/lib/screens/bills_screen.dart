@@ -10,6 +10,8 @@ import '../widgets/top_nav_bar.dart';
 import '../widgets/search_bar_field.dart';
 import '../widgets/header_row.dart';
 import '../widgets/list_empty_state.dart';
+import '../widgets/page_loading.dart';
+import '../widgets/error_state.dart';
 
 class BillsScreen extends ConsumerStatefulWidget {
   const BillsScreen({super.key});
@@ -136,32 +138,12 @@ class _BillsScreenState extends ConsumerState<BillsScreen> {
             Expanded(
               child: itemsAsync.when(
                 loading: () =>
-                    const Center(child: CircularProgressIndicator.adaptive()),
-                error: (e, _) => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(
-                          Icons.error_outline,
-                          color: Colors.redAccent,
-                          size: 48,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          e is FormatException ? e.message : e.toString(),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        FilledButton.icon(
-                          onPressed: () => ref.invalidate(billsProvider),
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('ลองอีกครั้ง'),
-                        ),
-                      ],
-                    ),
-                  ),
+                    const PageLoading(),
+                error: (e, _) => ErrorState(
+                  icon: Icons.error_outline,
+                  title: e is FormatException ? e.message : e.toString(),
+                  retryLabel: 'ลองอีกครั้ง',
+                  onRetry: () => ref.invalidate(billsProvider),
                 ),
                 data: (items) {
                   if (items.isEmpty) {

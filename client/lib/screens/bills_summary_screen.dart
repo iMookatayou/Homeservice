@@ -4,6 +4,8 @@ import 'package:intl/intl.dart';
 
 import '../state/bills_provider.dart';
 import '../models/bill_summary.dart';
+import '../widgets/page_loading.dart';
+import '../widgets/error_state.dart';
 
 class BillsSummaryScreen extends ConsumerWidget {
   const BillsSummaryScreen({super.key});
@@ -16,12 +18,13 @@ class BillsSummaryScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Bills Summary'), elevation: 0),
       body: summary.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text('โหลดสรุปไม่สำเร็จ\n$e'),
-          ),
+        loading: () => const PageLoading(),
+        error: (e, _) => ErrorState(
+          icon: Icons.error_outline,
+          title: 'โหลดสรุปไม่สำเร็จ',
+          error: e,
+          retryLabel: 'ลองอีกครั้ง',
+          onRetry: () => ref.invalidate(billsSummaryProvider),
         ),
         data: (items) {
           if (items.isEmpty) {
