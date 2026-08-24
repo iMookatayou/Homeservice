@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../state/purchase_providers.dart';
 import '../state/purchase_actions.dart';
 import '../models/purchase_model.dart';
+import '../widgets/error_state.dart';
 
 class PurchaseDetailScreen extends ConsumerWidget {
   final String id;
@@ -20,8 +21,10 @@ class PurchaseDetailScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Purchase Detail')),
       body: asyncDetail.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _ErrorState(
-          message: 'โหลดไม่สำเร็จ: $e',
+        error: (e, _) => ErrorState(
+          title: 'โหลดไม่สำเร็จ: $e',
+          icon: Icons.error_outline,
+          retryLabel: 'ลองอีกครั้ง',
           onRetry: () => ref.invalidate(purchaseDetailProvider(id)),
         ),
         data: (p) => RefreshIndicator(
@@ -480,28 +483,6 @@ class _BottomActions extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-}
-
-class _ErrorState extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-  const _ErrorState({required this.message, required this.onRetry});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
-          const SizedBox(height: 8),
-          Text(message, textAlign: TextAlign.center),
-          const SizedBox(height: 8),
-          FilledButton(onPressed: onRetry, child: const Text('ลองอีกครั้ง')),
-        ],
       ),
     );
   }

@@ -12,6 +12,7 @@ import '../services/purchase_api.dart';
 import '../widgets/top_nav_bar.dart';
 import '../widgets/search_bar_field.dart';
 import '../widgets/header_row.dart';
+import '../widgets/list_empty_state.dart';
 
 enum _StatusFilter { all, planned, ordered, bought, delivered, canceled }
 
@@ -303,9 +304,28 @@ class _ListBody extends StatelessWidget {
     final list = filtered.toList();
     if (list.isEmpty) {
       final hasQueryOrFilter = query.isNotEmpty || status != _StatusFilter.all;
-      return _EmptyState(
-        hasQueryOrFilter: hasQueryOrFilter,
-        onClearFilters: hasQueryOrFilter ? onClearFilters : null,
+      return ListEmptyState(
+        centered: true,
+        icon: Icons.shopping_bag_outlined,
+        title: hasQueryOrFilter
+            ? 'No results • ไม่พบรายการตามเงื่อนไข'
+            : 'No purchases yet • ยังไม่มีรายการสั่งซื้อ',
+        action: Wrap(
+          spacing: 8,
+          children: [
+            if (hasQueryOrFilter)
+              OutlinedButton.icon(
+                onPressed: onClearFilters,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Clear filters • ล้างตัวกรอง'),
+              ),
+            FilledButton.icon(
+              onPressed: () => context.push('/purchases/new'),
+              icon: const Icon(Icons.add),
+              label: const Text('New • เพิ่มรายการ'),
+            ),
+          ],
+        ),
       );
     }
 
@@ -552,53 +572,6 @@ class _ErrorOrAuth extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  final bool hasQueryOrFilter;
-  final VoidCallback? onClearFilters;
-  const _EmptyState({required this.hasQueryOrFilter, this.onClearFilters});
-
-  @override
-  Widget build(BuildContext context) {
-    final text = hasQueryOrFilter
-        ? 'No results • ไม่พบรายการตามเงื่อนไข'
-        : 'No purchases yet • ยังไม่มีรายการสั่งซื้อ';
-    return Padding(
-      padding: const EdgeInsets.only(top: 32),
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.shopping_bag_outlined,
-              size: 64,
-              color: Colors.grey,
-            ),
-            const SizedBox(height: 8),
-            Text(text, style: const TextStyle(fontSize: 16)),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: [
-                if (hasQueryOrFilter && onClearFilters != null)
-                  OutlinedButton.icon(
-                    onPressed: onClearFilters,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Clear filters • ล้างตัวกรอง'),
-                  ),
-                FilledButton.icon(
-                  onPressed: () => context.push('/purchases/new'),
-                  icon: const Icon(Icons.add),
-                  label: const Text('New • เพิ่มรายการ'),
-                ),
-              ],
-            ),
-          ],
-        ),
       ),
     );
   }

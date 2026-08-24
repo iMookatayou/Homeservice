@@ -6,15 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../state/auth_state.dart';
 import '../state/weather_provider.dart';
 import '../models/weather.dart';
-
-class AppColors {
-  // Hospital-ish, government-clean
-  static const deepNavy = Color(0xFF0F2D5C);
-  static const softBlue = Color(0xFF2D5BFF);
-  static const mint = Color(0xFF14B8A6);
-  static const cardBorder = Color(0xFFE7ECF4);
-  static const textMuted = Color(0xFF6B7280);
-}
+import '../widgets/error_state.dart';
+import '../shared/app_colors.dart';
 
 class _DotBadge extends StatelessWidget {
   const _DotBadge();
@@ -224,13 +217,14 @@ class _PillChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Status badge, not a button — no border/outline so it doesn't
+    // read as tappable like a Material chip.
     return Container(
       height: 30,
       padding: const EdgeInsets.symmetric(horizontal: 10),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -257,13 +251,17 @@ class _WeatherBodyProxy extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final weather = ref.watch(currentWeatherProvider);
-    return _WeatherBody(weather: weather);
+    return _WeatherBody(
+      weather: weather,
+      onRetry: () => ref.invalidate(currentWeatherProvider),
+    );
   }
 }
 
 class _WeatherBody extends StatelessWidget {
-  const _WeatherBody({required this.weather});
+  const _WeatherBody({required this.weather, required this.onRetry});
   final AsyncValue<WeatherNow> weather;
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -272,36 +270,38 @@ class _WeatherBody extends StatelessWidget {
         padding: EdgeInsets.symmetric(vertical: 20),
         child: Center(child: CircularProgressIndicator()),
       ),
-      error: (e, _) => _EmptyState(
+      error: (e, _) => ErrorState(
         icon: Icons.cloud_off,
         title: 'Failed to load weather',
-        message: '$e',
-        actionLabel: 'Retry',
-        onAction: () {},
+        error: e,
+        retryLabel: 'Retry',
+        onRetry: onRetry,
       ),
       data: (w) {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: _MetricTile(
-                    icon: Icons.thermostat_outlined,
-                    title: 'Temperature',
-                    value: '${w.temperature.toStringAsFixed(1)} °C',
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: _MetricTile(
+                      icon: Icons.thermostat_outlined,
+                      title: 'Temperature',
+                      value: '${w.temperature.toStringAsFixed(1)} °C',
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _MetricTile(
-                    icon: Icons.wb_sunny_outlined,
-                    title: 'Condition',
-                    value: w.conditionLabel,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _MetricTile(
+                      icon: Icons.wb_sunny_outlined,
+                      title: 'Condition',
+                      value: w.conditionLabel,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
             const SizedBox(height: 12),
             Row(
@@ -399,71 +399,13 @@ class _InfoRow extends StatelessWidget {
         Expanded(
           child: Text(
             value,
-            textAlign: TextAlign.right,
+            overflow: TextOverflow.ellipsis,
             style: Theme.of(
               context,
             ).textTheme.bodyMedium?.copyWith(color: AppColors.deepNavy),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  const _EmptyState({
-    required this.icon,
-    required this.title,
-    required this.message,
-    this.actionLabel,
-    this.onAction,
-  });
-
-  final IconData icon;
-  final String title;
-  final String message;
-  final String? actionLabel;
-  final VoidCallback? onAction;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 18),
-      child: Column(
-        children: [
-          Icon(icon, size: 40, color: AppColors.textMuted),
-          const SizedBox(height: 8),
-          Text(
-            title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppColors.deepNavy,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: AppColors.textMuted),
-          ),
-          if (actionLabel != null) ...[
-            const SizedBox(height: 10),
-            OutlinedButton(
-              onPressed: onAction,
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.softBlue,
-                side: const BorderSide(color: AppColors.softBlue),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              child: Text(actionLabel!),
-            ),
-          ],
-        ],
-      ),
     );
   }
 }

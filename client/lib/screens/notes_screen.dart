@@ -12,6 +12,7 @@ import '../repositories/notes_repository.dart';
 // ✅ ใช้ Header แบบเดียวกับหน้าอื่น
 import '../widgets/top_nav_bar.dart';
 import '../widgets/header_row.dart';
+import '../widgets/error_state.dart';
 
 class NotesScreen extends ConsumerStatefulWidget {
   const NotesScreen({super.key});
@@ -262,8 +263,10 @@ class _NotesScreenState extends ConsumerState<NotesScreen> {
       child: notes.when(
         loading: () =>
             const Center(child: CircularProgressIndicator.adaptive()),
-        error: (e, _) => _ErrorView(
-          message: '$e',
+        error: (e, _) => ErrorState(
+          title: '$e',
+          icon: Icons.error_outline,
+          retryLabel: 'Retry',
           onRetry: () => ref.refresh(notesProvider(_query)),
         ),
         data: (items) {
@@ -881,27 +884,6 @@ class _Pill extends StatelessWidget {
           color: textColor,
           fontWeight: FontWeight.w600,
         ),
-      ),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.message, required this.onRetry});
-  final String message;
-  final VoidCallback onRetry;
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.error_outline, size: 48, color: Colors.redAccent),
-          const SizedBox(height: 8),
-          Text(message, textAlign: TextAlign.center),
-          const SizedBox(height: 12),
-          FilledButton(onPressed: onRetry, child: const Text('Retry')),
-        ],
       ),
     );
   }
